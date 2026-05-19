@@ -183,6 +183,10 @@
     font-size: 12px;
     color: var(--muted);
   }
+  
+  #fitText {
+    white-space: pre-line; /* Заставляет браузер переносить строку на символах \n */
+  }
 
   @media (max-width: 980px) {
     .layout { grid-template-columns: 1fr; }
@@ -217,10 +221,10 @@
 
     <div class="help">
       <b>Как работать:</b><br>
-      1) загрузите ряд в поле для ввода и нажмите «Загрузить из поля для ввода»;<br>
-      2) выберите режим «Флаг 1», «Флаг 0» или «Не выбран»;<br>
-      3) удерживайте Ctrl и кликайте по точкам или выделяйте интервал мышью;<br>
-      4) экспортируйте таблицу с датой-временем, ОА радона и флагом.
+      1) загрузите временную серию в поле для ввода и нажмите «Загрузить из поля для ввода»;<br>
+      2) выберите режим «Флаг 1», «Флаг 0»;<br>
+      3) удерживайте Ctrl и выделяйте интервал точек, которым нужно установить флаг;<br>
+      4) по окончании работы экспортируйте таблицу со всеми данными.
     </div>
 
     <div class="status" id="statusBox">
@@ -239,6 +243,7 @@
     <button id="flag0Btn">Флаг 0 (Разбавление)</button>
     <button id="noneBtn" class="secondary active">Не выбрано</button>
 	<span>|</span>
+	<button id="logYBtn">Log Y: OFF</button>
     <button id="resetZoomBtn">Сброс масштаба</button>
 	<span>|</span>
 	<button id="exportCsvBtn">Экспорт данных в CSV</button>
@@ -254,16 +259,17 @@
 	
 </section>
 <div class="mini-row" style="margin-top:10px;margin-bottom:10px;">
-		<span class="pill">Ctrl + ЛКМ по точке - назначить флаг</span>
-		<span class="pill">Ctrl + выделение - назначить флаг всем точкам внутри интервала по X</span>
+		<span class="pill">Ctrl + ЛКМ с выделением области - назначить флаг</span>
+		<span class="pill">Ctrl + ПКМ с выделением области - снять флаг</span>
 		<span class="pill">Колесо - масштаб по X вокруг курсора</span>
-		<span class="pill">ЛКМ без Ctrl - панорамирование</span>
+		<span class="pill">Shift + Колесо - масштаб по Y вокруг курсора</span>
+		<span class="pill">ЛКМ - панорамирование</span>
     </div>
 	
   <section class="card" style="padding:12px;">
     <div style="font-weight:600; margin-bottom:8px;">Предпросмотр данных</div>
     <div style="overflow:auto; max-height:360px; border:1px solid var(--border); border-radius:10px;">
-      <table id="previewTable" style="width:100%; border-collapse:collapse; font-size:12px;">
+      <table id="previewTable" style="width:100%; border-collapse:collapse; font-size:12px; text-align:center;">
         <thead style="position:sticky; top:0; background:#f9fafb;">
           <tr>
             <th style="padding:6px; border-bottom:1px solid var(--border);">datetime</th>
@@ -315,6 +321,7 @@
     mouseX: null,
     mouseY: null,
     cursorIndex: -1,
+	logY: false,
   };
 
   const MODEL_EPS = 1e-12;
@@ -334,6 +341,13 @@
     resetView();
     render();
   });
+  
+  $("logYBtn").addEventListener("click", () => {
+	  state.logY = !state.logY;
+	  $("logYBtn").textContent =
+		`Log Y: ${state.logY ? "ON" : "OFF"}`;
+	  render();
+	});
 
   $("loadTextBtn").addEventListener("click", () => {
     const rows = parseSeriesText(inputText.value || "");
@@ -525,22 +539,39 @@
     state.viewMaxY = ymax + dy * 0.08;
   }
 
+	function transformY(y) {
+	  if (!state.logY) return y;
+	  // защита от <=0
+	  return Math.log10(Math.max(y, 1e-12));
+	}
+
+	function inverseTransformY(y) {
+	  if (!state.logY) return y;
+	  return Math.pow(10, y);
+	}
+
   function xToPx(x) {
     const w = canvas.clientWidth - M.l - M.r; // Ширина области просмотра
     return M.l + (x - state.viewMinX) / (state.viewMaxX - state.viewMinX) * w;
   }
   function yToPx(y) {
-    const h = canvas.clientHeight - M.t - M.b; // Высота области просмотра
-    return M.t + (1 - (y - state.viewMinY) / (state.viewMaxY - state.viewMinY)) * h;
+	  const h = canvas.clientHeight - M.t - M.b;
+	  const yy = transformY(y);
+	  const minY = transformY(state.viewMinY);
+	  const maxY = transformY(state.viewMaxY);
+	  return (M.t + (1 - (yy - minY) / (maxY - minY)) * h);
   }
   function pxToX(px) {
     const w = canvas.clientWidth - M.l - M.r;
     return state.viewMinX + (px - M.l) / w * (state.viewMaxX - state.viewMinX);
   }
   function pxToY(py) {
-    const h = canvas.clientHeight - M.t - M.b;
-    return state.viewMaxY - (py - M.t) / h * (state.viewMaxY - state.viewMinY);
-  }
+	  const h = canvas.clientHeight - M.t - M.b;
+	  const minY = transformY(state.viewMinY);
+	  const maxY = transformY(state.viewMaxY);
+	  const yy = maxY - ((py - M.t) / h) * (maxY - minY);
+	  return inverseTransformY(yy);
+	}
 
   function niceNum(range, round) {
     const exponent = Math.floor(Math.log10(range));
@@ -762,7 +793,26 @@
     ctx.strokeStyle = "#e5e7eb";
     ctx.lineWidth = 1;
 
-    const yTicks = niceTicks(state.viewMinY, state.viewMaxY, 7);
+    let yTicks;
+	if (state.logY) {
+	  const minPow = Math.floor(
+		Math.log10(Math.max(state.viewMinY, 1e-12))
+	  );
+
+	  const maxPow = Math.ceil(
+		Math.log10(Math.max(state.viewMaxY, 1e-12))
+	  );
+	  yTicks = [];
+	  for (let p = minPow; p <= maxPow; p++) {
+		yTicks.push(Math.pow(10, p));
+	  }
+	} else {
+	  yTicks = niceTicks(
+		state.viewMinY,
+		state.viewMaxY,
+		7
+	  );
+	}
     for (const v of yTicks) {
       const y = yToPx(v);
       ctx.beginPath();
@@ -803,7 +853,13 @@
       ctx.moveTo(x0 - 5, y);
       ctx.lineTo(x0, y);
       ctx.stroke();
-      ctx.fillText(formatY(v), x0 - 8, y);
+      ctx.fillText(
+	  state.logY
+		? `10^${Math.round(Math.log10(v))}`
+		: formatY(v),
+	  x0 - 8,
+	  y
+	);
     }
 
     const fmtTime = chooseTimeFormatter(state.viewMaxX - state.viewMinX);
@@ -825,7 +881,7 @@
     ctx.fillStyle = "#6b7280";
     ctx.textAlign = "center";
     ctx.textBaseline = "bottom";
-    ctx.fillText("Время", (x0 + x1) / 2, H - 6);
+    ctx.fillText("Дата и время", (x0 + x1) / 2, H - 6);
     ctx.save();
     ctx.translate(16, (y0 + y1) / 2);
     ctx.rotate(-Math.PI / 2);
@@ -837,83 +893,169 @@
   }
 
   function drawSelection() {
-    if (!state.selecting || !state.rect) return;
-    const { x1, y1, x2, y2 } = state.rect;
-    const left = Math.min(x1, x2), top = Math.min(y1, y2), w = Math.abs(x2 - x1), h = Math.abs(y2 - y1);
-    ctx.save();
-    ctx.fillStyle = "rgba(37,99,235,.12)";
-    ctx.strokeStyle = "rgba(37,99,235,.9)";
-    ctx.setLineDash([6, 4]);
-    ctx.fillRect(left, top, w, h);
-    ctx.strokeRect(left, top, w, h);
-    ctx.restore();
-  }
+
+	  if (!state.selecting || !state.rect) return;
+	  const left = Math.min(state.rect.x1, state.rect.x2);
+	  const right = Math.max(state.rect.x1, state.rect.x2);
+	  const top = M.t;
+	  const bottom = canvas.clientHeight - M.b;
+	  ctx.save();
+	  // Полупрозрачный interval highlight
+	  ctx.fillStyle = "rgba(37,99,235,.12)";
+	  ctx.strokeStyle = "rgba(37,99,235,.9)";
+	  ctx.setLineDash([6, 4]);
+	  // Основная область
+	  ctx.fillRect(
+		left,
+		top,
+		right - left,
+		bottom - top
+	  );
+	  // Границы интервала
+	  ctx.beginPath();
+
+	  ctx.moveTo(left, top);
+	  ctx.lineTo(left, bottom);
+	  ctx.moveTo(right, top);
+	  ctx.lineTo(right, bottom);
+	  ctx.stroke();
+	  ctx.restore();
+	}
 
   function drawFits() {
-    if (!state.fits.length) return;
-    ctx.save();
-    ctx.lineWidth = 2;
-    for (const fit of state.fits) {
-      const idxs = [];
-      for (let i = fit.start; i < fit.end; i++) {
-        const r = state.rows[i];
-        if (isFinite(r.t) && isFinite(r.y)) idxs.push(i);
-      }
-      if (idxs.length < 2) continue;
-      ctx.strokeStyle = fit.flag === 1 ? "rgba(220,38,38,.75)" : "rgba(37,99,235,.75)";
-      ctx.beginPath();
-      let started = false;
-      for (let k = 0; k < idxs.length; k++) {
-        const i = idxs[k];
-        const tHours = (state.rows[i].t - fit.t0) / 3600000.0;
-        const y = model(tHours, fit.lambda, fit.phi, fit.C0);
-        const xPx = xToPx(state.rows[i].t);
-        const yPx = yToPx(y);
-        if (!started) { ctx.moveTo(xPx, yPx); started = true; }
-        else ctx.lineTo(xPx, yPx);
-      }
-      ctx.stroke();
+  if (!state.fits.length) return;
+
+  const plotX = M.l;
+  const plotY = M.t;
+  const plotW = canvas.clientWidth - M.l - M.r;
+  const plotH = canvas.clientHeight - M.t - M.b;
+
+  ctx.save();
+
+  // Ограничиваем рисование областью графика
+  ctx.beginPath();
+  ctx.rect(plotX, plotY, plotW, plotH);
+  ctx.clip();
+
+  ctx.lineWidth = 2;
+
+  for (const fit of state.fits) {
+    const idxs = [];
+
+    for (let i = fit.start; i < fit.end; i++) {
+      const r = state.rows[i];
+      if (isFinite(r.t) && isFinite(r.y)) idxs.push(i);
     }
-    ctx.restore();
+
+    if (idxs.length < 2) continue;
+
+    ctx.strokeStyle =
+      fit.flag === 1
+        ? "rgba(220,38,38,.75)"
+        : "rgba(37,99,235,.75)";
+
+    ctx.beginPath();
+
+    let started = false;
+
+    for (let k = 0; k < idxs.length; k++) {
+      const i = idxs[k];
+
+      const tHours = (state.rows[i].t - fit.t0) / 3600000.0;
+
+      const y = model(
+        tHours,
+        fit.lambda,
+        fit.phi,
+        fit.C0
+      );
+
+      const xPx = xToPx(state.rows[i].t);
+      const yPx = yToPx(y);
+
+      if (!started) {
+        ctx.moveTo(xPx, yPx);
+        started = true;
+      } else {
+        ctx.lineTo(xPx, yPx);
+      }
+    }
+
+    ctx.stroke();
   }
+
+  ctx.restore();
+}
 
   function drawSeries() {
-    if (!state.rows.length) return;
-    ctx.save();
-    ctx.lineWidth = 1.6;
-    ctx.beginPath();
-    let started = false;
-    for (const r of state.rows) {
-      if (!isFinite(r.t) || !isFinite(r.y)) continue;
-      const x = xToPx(r.t), y = yToPx(r.y);
-      if (!started) { ctx.moveTo(x, y); started = true; }
-      else ctx.lineTo(x, y);
-    }
-    ctx.strokeStyle = "#1f2937";
-    ctx.stroke();
+  if (!state.rows.length) return;
 
-    // Scatter points + flags.
-    for (let i = 0; i < state.rows.length; i++) {
-      const r = state.rows[i];
-      if (!isFinite(r.t) || !isFinite(r.y)) continue;
-      const x = xToPx(r.t), y = yToPx(r.y);
-      const hovered = i === state.cursorIndex;
-      const flag = r.flag;
-      let fill = "#6b7280";
-      let stroke = "#fff";
-      if (flag === 1) fill = "#dc2626";
-      if (flag === 0) fill = "#2563eb";
-      const radius = hovered ? 5.5 : 3.8;
-      ctx.beginPath();
-      ctx.arc(x, y, radius, 0, Math.PI * 2);
-      ctx.fillStyle = fill;
-      ctx.fill();
-      ctx.lineWidth = hovered ? 2 : 1;
-      ctx.strokeStyle = stroke;
-      ctx.stroke();
+  const plotX = M.l;
+  const plotY = M.t;
+  const plotW = canvas.clientWidth - M.l - M.r;
+  const plotH = canvas.clientHeight - M.t - M.b;
+
+  ctx.save();
+
+  // Ограничение области построения
+  ctx.beginPath();
+  ctx.rect(plotX, plotY, plotW, plotH);
+  ctx.clip();
+
+  ctx.lineWidth = 1.6;
+
+  ctx.beginPath();
+
+  let started = false;
+
+  for (const r of state.rows) {
+    if (!isFinite(r.t) || !isFinite(r.y)) continue;
+
+    const x = xToPx(r.t);
+    const y = yToPx(r.y);
+
+    if (!started) {
+      ctx.moveTo(x, y);
+      started = true;
+    } else {
+      ctx.lineTo(x, y);
     }
-    ctx.restore();
   }
+
+  ctx.strokeStyle = "#1f2937";
+  ctx.stroke();
+
+  // Точки
+  for (let i = 0; i < state.rows.length; i++) {
+    const r = state.rows[i];
+
+    if (!isFinite(r.t) || !isFinite(r.y)) continue;
+
+    const x = xToPx(r.t);
+    const y = yToPx(r.y);
+
+    const hovered = i === state.cursorIndex;
+
+    let fill = "#6b7280";
+
+    if (r.flag === 1) fill = "#dc2626";
+    if (r.flag === 0) fill = "#2563eb";
+
+    const radius = hovered ? 5.5 : 3.8;
+
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+
+    ctx.fillStyle = fill;
+    ctx.fill();
+
+    ctx.lineWidth = hovered ? 2 : 1;
+    ctx.strokeStyle = "#fff";
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
 
   function drawCursor() {
     if (state.cursorIndex < 0 || state.cursorIndex >= state.rows.length) return;
@@ -951,9 +1093,21 @@ const tooltipLines = [
     const lineWidths = label.map(line => ctx.measureText(line).width);
     const boxW = Math.max(...lineWidths) + padX * 2;
     const boxH = label.length * 18 + padY * 2;
-    let bx = Math.min(canvas.clientWidth - M.r - boxW - 4, x + 12);
-    let by = Math.max(M.t + 4, y - 34);
-    ctx.fillStyle = "rgba(0,0,0,.92)";
+    const topPadding = 8;
+
+	let bx = x - boxW / 2;
+
+	// Ограничиваем tooltip внутри plotting area
+	bx = Math.max(M.l + 4, bx);
+	bx = Math.min(
+	  canvas.clientWidth - M.r - boxW - 4,
+	  bx
+	);
+
+	// Фиксированная позиция сверху
+	const by = M.t + topPadding;
+	
+    ctx.fillStyle = "rgba(17,24,39,.82)";
     ctx.strokeStyle = "rgba(255,255,255,.15)";
     roundRect(ctx, bx, by, boxW, boxH, 8);
     ctx.fill();
@@ -1022,8 +1176,8 @@ const tooltipLines = [
     const f0 = state.rows.filter(r => r.flag === 0).length;
     const none = n - f1 - f0;
     const segs = state.fits.length;
-    const parts = [`точек: ${n}`, `флаг 1: ${f1}`, `флаг 0: ${f0}`, `не выбран: ${none}`, `сегментов fit: ${segs}`];
-    fitText.textContent = `Fit: ${parts.join(" · ")}`;
+    const parts = [`Участков накопления: ${f1}`, `Участков разбавления: ${f0}`, `Не выбрано: ${none}`, `Сегментов для подгонки: ${segs}`];
+    fitText.textContent = `${parts.join("\n")}`;
   }
 
   function setCursorInfo() {
@@ -1035,7 +1189,7 @@ const tooltipLines = [
     const fitExtra = r.fit
       ? ` | C0=${r.fit.C0.toFixed(4)} | Phi=${r.fit.phi.toFixed(6)} | Lambda=${r.fit.lambda.toFixed(10)}`
       : "";
-    cursorText.textContent = `Курсор: ${formatDateTime(r.t)} | y=${r.y.toFixed(4)} | flag=${r.flag == null ? "-" : r.flag}${fitExtra}`;
+    cursorText.textContent = `Курсор: ${formatDateTime(r.t)} | y=${r.y.toFixed(4)} | Флаг=${r.flag == null ? "-" : r.flag}${fitExtra}`;
   }
 
   function setSelectionInfo(text) {
@@ -1142,65 +1296,191 @@ const tooltipLines = [
     }
 
     if (state.panning) {
-      const dx = p.x - state.lastPt.x;
-      const scaleX = (state.viewMaxX - state.viewMinX) / Math.max(1, canvas.clientWidth - M.l - M.r);
-      const shiftX = dx * scaleX;
-      state.viewMinX -= shiftX;
-      state.viewMaxX -= shiftX;
 
-      const fullRange = state.dataMaxX - state.dataMinX;
-      const currentRange = state.viewMaxX - state.viewMinX;
+	  // =====================================================
+	  // PAN X
+	  // =====================================================
 
-      if (state.viewMinX < state.dataMinX - fullRange * 0.05) {
-        state.viewMinX = state.dataMinX - fullRange * 0.05;
-        state.viewMaxX = state.viewMinX + currentRange;
-      }
+	  const dx = p.x - state.lastPt.x;
 
-      if (state.viewMaxX > state.dataMaxX + fullRange * 0.05) {
-        state.viewMaxX = state.dataMaxX + fullRange * 0.05;
-        state.viewMinX = state.viewMaxX - currentRange;
-      }
-      state.lastPt = p;
-      render();
-    }
+	  const scaleX =
+		(state.viewMaxX - state.viewMinX) /
+		Math.max(1, canvas.clientWidth - M.l - M.r);
+
+	  const shiftX = dx * scaleX;
+
+	  state.viewMinX -= shiftX;
+	  state.viewMaxX -= shiftX;
+
+	  const fullRangeX =
+		state.dataMaxX - state.dataMinX;
+
+	  const currentRangeX =
+		state.viewMaxX - state.viewMinX;
+
+	  if (
+		state.viewMinX <
+		state.dataMinX - fullRangeX * 0.05
+	  ) {
+		state.viewMinX =
+		  state.dataMinX - fullRangeX * 0.05;
+
+		state.viewMaxX =
+		  state.viewMinX + currentRangeX;
+	  }
+
+	  if (
+		state.viewMaxX >
+		state.dataMaxX + fullRangeX * 0.05
+	  ) {
+		state.viewMaxX =
+		  state.dataMaxX + fullRangeX * 0.05;
+
+		state.viewMinX =
+		  state.viewMaxX - currentRangeX;
+	  }
+
+	  // =====================================================
+	  // PAN Y
+	  // =====================================================
+
+	  const dy = p.y - state.lastPt.y;
+
+	// =====================================================
+	// LOG / LINEAR aware PAN Y
+	// =====================================================
+
+	const h =
+	  Math.max(
+		1,
+		canvas.clientHeight - M.t - M.b
+	  );
+
+	const minTY = transformY(state.viewMinY);
+	const maxTY = transformY(state.viewMaxY);
+
+	const rangeTY = maxTY - minTY;
+
+	// Смещение в transform-space
+	const shiftTY = (dy / h) * rangeTY;
+
+	// PAN без изменения zoom
+	const newMinTY = minTY + shiftTY;
+	const newMaxTY = maxTY + shiftTY;
+
+	state.viewMinY = inverseTransformY(newMinTY);
+	state.viewMaxY = inverseTransformY(newMaxTY);
+
+	  const fullRangeY =
+		state.dataMaxY - state.dataMinY || 1;
+
+	  const currentRangeY =
+		state.viewMaxY - state.viewMinY;
+
+	  // Ограничения по Y
+	  if (
+		state.viewMinY <
+		state.dataMinY - fullRangeY * 2
+	  ) {
+		state.viewMinY =
+		  state.dataMinY - fullRangeY * 2;
+
+		state.viewMaxY =
+		  state.viewMinY + currentRangeY;
+	  }
+
+	  if (
+		state.viewMaxY >
+		state.dataMaxY + fullRangeY * 2
+	  ) {
+		state.viewMaxY =
+		  state.dataMaxY + fullRangeY * 2;
+
+		state.viewMinY =
+		  state.viewMaxY - currentRangeY;
+	  }
+
+	  state.lastPt = p;
+
+	  render();
+	}
   });
 
   canvas.addEventListener("pointerup", ev => {
-    if (!state.dragging) return;
-    const p = canvasPos(ev);
-    const didSelect = state.selecting && state.rect;
-    state.dragging = false;
-    state.panning = false;
+	  if (!state.dragging) return;
 
-    if (didSelect) {
-      const x0 = pxToX(state.rect.x1), x1 = pxToX(state.rect.x2);
-      const idxs = visibleRangeIndices(x0, x1);
-      if (idxs.length) {
-        applyFlagToIndices(idxs, state.activeFlag);
-        setSelectionInfo(`применён флаг ${state.activeFlag == null ? "—" : state.activeFlag} к точкам: ${idxs.length}`);
-      } else {
-        setSelectionInfo("пусто");
-      }
-      state.rect = null;
-      render();
-      return;
-    }
+	  const p = canvasPos(ev);
+	  const didSelect = state.selecting && state.rect;
 
-    // click / point assignment when Ctrl is pressed and drag was tiny.
-    const moved = Math.hypot((p.x - state.dragStart.x), (p.y - state.dragStart.y));
-    if (ev.ctrlKey && moved < 6) {
-      const near = nearestPoint(p.x, p.y);
-      if (near.idx >= 0 && near.dist2 <= PX_THRESH * PX_THRESH) {
-        applyFlagToIndices([near.idx], state.activeFlag);
-        setSelectionInfo(`точка ${near.idx + 1} помечена как ${state.activeFlag == null ? "—" : state.activeFlag}`);
-      } else {
-        setSelectionInfo("точка не найдена рядом с курсором");
-      }
-    }
+	  state.dragging = false;
+	  state.panning = false;
 
-    state.rect = null;
-    render();
-  });
+	  // Ctrl + ПКМ -> сброс флага
+	  const resetMode = ev.ctrlKey && ev.button === 2;
+
+	  if (didSelect) {
+		const x0 = pxToX(state.rect.x1);
+		const x1 = pxToX(state.rect.x2);
+
+		const idxs = visibleRangeIndices(x0, x1);
+
+		if (idxs.length) {
+		  applyFlagToIndices(
+			idxs,
+			resetMode ? null : state.activeFlag
+		  );
+
+		  setSelectionInfo(
+			resetMode
+			  ? `сброшены флаги у точек: ${idxs.length}`
+			  : `применён флаг ${state.activeFlag == null ? "—" : state.activeFlag} к точкам: ${idxs.length}`
+		  );
+		} else {
+		  setSelectionInfo("пусто");
+		}
+
+		state.rect = null;
+		render();
+		return;
+	  }
+
+	  // Одиночная точка
+	  const moved = Math.hypot(
+		(p.x - state.dragStart.x),
+		(p.y - state.dragStart.y)
+	  );
+
+	  if (ev.ctrlKey && moved < 6) {
+		const near = nearestPoint(p.x, p.y);
+
+		if (
+		  near.idx >= 0 &&
+		  near.dist2 <= PX_THRESH * PX_THRESH
+		) {
+		  applyFlagToIndices(
+			[near.idx],
+			resetMode ? null : state.activeFlag
+		  );
+
+		  setSelectionInfo(
+			resetMode
+			  ? `флаг точки ${near.idx + 1} сброшен`
+			  : `точка ${near.idx + 1} помечена как ${state.activeFlag == null ? "—" : state.activeFlag}`
+		  );
+		} else {
+		  setSelectionInfo(
+			"точка не найдена рядом с курсором"
+		  );
+		}
+	  }
+
+	  state.rect = null;
+	  render();
+	});
+
+  canvas.addEventListener("contextmenu", ev => {
+	  ev.preventDefault();
+	});
 
   canvas.addEventListener("pointerleave", () => {
     state.cursorIndex = -1;
@@ -1209,33 +1489,108 @@ const tooltipLines = [
   });
 
   canvas.addEventListener("wheel", ev => {
-    if (!state.rows.length) return;
-    ev.preventDefault();
-    const p = canvasPos(ev);
-    const factor = ev.deltaY < 0 ? 0.9 : 1.1;
-    const xAtCursor = pxToX(p.x);
-    const range = state.viewMaxX - state.viewMinX;
-    let newRange = range * factor;
-    const minRange = Math.max(60000, (state.dataMaxX - state.dataMinX) * 0.0005);
-    const maxRange = Math.max(range, (state.dataMaxX - state.dataMinX) * 50);
-    newRange = Math.max(minRange, Math.min(maxRange, newRange));
-    const leftFrac = (xAtCursor - state.viewMinX) / range;
-    state.viewMinX = xAtCursor - leftFrac * newRange;
-    state.viewMaxX = state.viewMinX + newRange;
+	  if (!state.rows.length) return;
 
-    const fullRange = state.dataMaxX - state.dataMinX;
+	  ev.preventDefault();
 
-    if (state.viewMinX < state.dataMinX - fullRange * 0.05) {
-      state.viewMinX = state.dataMinX - fullRange * 0.05;
-      state.viewMaxX = state.viewMinX + newRange;
-    }
+	  const p = canvasPos(ev);
 
-    if (state.viewMaxX > state.dataMaxX + fullRange * 0.05) {
-      state.viewMaxX = state.dataMaxX + fullRange * 0.05;
-      state.viewMinX = state.viewMaxX - newRange;
-    }
-    render();
-  }, { passive: false });
+	  // zoom in/out
+	  const factor = ev.deltaY < 0 ? 0.9 : 1.1;
+
+	  // =====================================================
+	  // SHIFT + WHEEL -> масштаб по Y
+	  // =====================================================
+	  if (ev.shiftKey) {
+
+		const yAtCursor = pxToY(p.y);
+
+		const rangeY = state.viewMaxY - state.viewMinY;
+
+		let newRangeY = rangeY * factor;
+
+		const fullRangeY = state.dataMaxY - state.dataMinY || 1;
+
+		const minRangeY = Math.max(1e-6, fullRangeY * 0.0005);
+		const maxRangeY = fullRangeY * 50;
+
+		newRangeY = Math.max(
+		  minRangeY,
+		  Math.min(maxRangeY, newRangeY)
+		);
+
+		const topFrac =
+		  (state.viewMaxY - yAtCursor) / rangeY;
+
+		state.viewMaxY =
+		  yAtCursor + topFrac * newRangeY;
+
+		state.viewMinY =
+		  state.viewMaxY - newRangeY;
+
+		render();
+		return;
+	  }
+
+	  // =====================================================
+	  // Обычный zoom по X
+	  // =====================================================
+
+	  const xAtCursor = pxToX(p.x);
+
+	  const rangeX = state.viewMaxX - state.viewMinX;
+
+	  let newRangeX = rangeX * factor;
+
+	  const fullRangeX = state.dataMaxX - state.dataMinX || 1;
+
+	  const minRangeX = Math.max(
+		60000,
+		fullRangeX * 0.0005
+	  );
+
+	  const maxRangeX = fullRangeX * 50;
+
+	  newRangeX = Math.max(
+		minRangeX,
+		Math.min(maxRangeX, newRangeX)
+	  );
+
+	  const leftFrac =
+		(xAtCursor - state.viewMinX) / rangeX;
+
+	  state.viewMinX =
+		xAtCursor - leftFrac * newRangeX;
+
+	  state.viewMaxX =
+		state.viewMinX + newRangeX;
+
+	  // Ограничение pan/zoom по X
+	  if (
+		state.viewMinX <
+		state.dataMinX - fullRangeX * 0.05
+	  ) {
+		state.viewMinX =
+		  state.dataMinX - fullRangeX * 0.05;
+
+		state.viewMaxX =
+		  state.viewMinX + newRangeX;
+	  }
+
+	  if (
+		state.viewMaxX >
+		state.dataMaxX + fullRangeX * 0.05
+	  ) {
+		state.viewMaxX =
+		  state.dataMaxX + fullRangeX * 0.05;
+
+		state.viewMinX =
+		  state.viewMaxX - newRangeX;
+	  }
+
+	  render();
+
+	}, { passive: false });
 
   document.addEventListener("keydown", ev => {
     // no-op; Ctrl is handled by pointer state directly
