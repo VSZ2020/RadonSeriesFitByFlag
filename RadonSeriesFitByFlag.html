@@ -1262,7 +1262,10 @@ const tooltipLines = [
     if (ev.ctrlKey) {
       state.selecting = true;
       state.panning = false;
-      state.rect = { x1: p.x, y1: p.y, x2: p.x, y2: p.y };
+      state.rect = {
+        x1: p.x,
+        x2: p.x
+      };
       setSelectionInfo("идёт выделение интервала");
     } else {
       state.panning = true;
@@ -1287,7 +1290,6 @@ const tooltipLines = [
 
     if (state.selecting) {
       state.rect.x2 = p.x;
-      state.rect.y2 = p.y;
       const x0 = pxToX(state.rect.x1), x1 = pxToX(state.rect.x2);
       const idxs = visibleRangeIndices(x0, x1);
       setSelectionInfo(`X от ${formatDateTime(Math.min(x0, x1))} до ${formatDateTime(Math.max(x0, x1))} · точек: ${idxs.length}`);
