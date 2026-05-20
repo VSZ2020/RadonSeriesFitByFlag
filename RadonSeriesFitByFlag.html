@@ -204,7 +204,13 @@
   <section class="left card">
     <div>
       <div style="font-weight:600; margin-bottom:6px;">Исходная серия</div>
-      <textarea id="inputText" spellcheck="false" placeholder="Вставьте таблицу: datetime[TAB]radon\nПример:\n19.05.2026 12:00:00\t123.4"></textarea>
+      <textarea id="inputText" spellcheck="false" placeholder="Пример таблицы
+20.05.2026 12:00:00[TAB]123.4
+20.05.2026 13:00:00[TAB]125.2
+20.05.2026 14:00:00[TAB]130.7
+
+Здесь [TAB] - разделитель между колонками. При копировании таблицы из Excel значения уже разделены табуляцией.
+Формат даты и времени зависит от установленных в вашей системе региональных стандартов."></textarea>
       <div class="small-note" style="margin-top:0px;margin-bottom:6px;">
         Поддерживаются разделители таб, запятая и точка с запятой. Если есть третья колонка, она может содержать флаг 0/1.
       </div>
