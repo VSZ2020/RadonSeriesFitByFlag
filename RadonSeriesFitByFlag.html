@@ -1,1244 +1,1380 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Обработка временной серии радона</title>
-<style>
-  :root {
-    --bg: #f3f4f6;
-    --panel: #ffffff;
-    --border: #d1d5db;
-    --text: #111827;
-    --muted: #6b7280;
-    --blue: #2563eb;
-    --blue-weak: #dbeafe;
-    --red: #dc2626;
-    --red-weak: #fee2e2;
-    --green: #16a34a;
-    --green-weak: #dcfce7;
-    --gray-weak: #e5e7eb;
-  }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Обработка временной серии радона</title>
+  <style>
+    :root {
+      --bg: #f3f4f6;
+      --panel: #ffffff;
+      --border: #d1d5db;
+      --text: #111827;
+      --muted: #6b7280;
+      --blue: #2563eb;
+      --blue-weak: #dbeafe;
+      --red: #dc2626;
+      --red-weak: #fee2e2;
+      --green: #16a34a;
+      --green-weak: #dcfce7;
+      --gray-weak: #e5e7eb;
+    }
 
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    background: var(--bg);
-    color: var(--text);
-  }
+    * {
+      box-sizing: border-box;
+    }
 
-  header {
-    background: var(--panel);
-    border-bottom: 1px solid var(--border);
-    box-shadow: 0 1px 2px rgba(0,0,0,.05);
-    padding: 14px 16px 12px;
-  }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
 
-  h1 {
-    margin: 0 0 10px;
-    font-size: 20px;
-    font-weight: 650;
-  }
+    header {
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, .05);
+      padding: 14px 16px 12px;
+    }
 
-  .toolbar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: center;
-    margin-bottom: 10px;
-  }
+    h1 {
+      margin: 0 0 10px;
+      font-size: 20px;
+      font-weight: 650;
+    }
 
-  button, .file-label {
-    border: 1px solid #94a3b8;
-    background: #eef2ff;
-    color: #111827;
-    padding: 8px 12px;
-    border-radius: 10px;
-    cursor: pointer;
-    font-size: 14px;
-    user-select: none;
-  }
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
 
-  button:hover, .file-label:hover { background: #e0e7ff; }
-  button.active {
-    background: var(--blue);
-    color: #fff;
-    border-color: #1d4ed8;
-    box-shadow: 0 0 0 2px rgba(37,99,235,.15) inset;
-  }
-  button.secondary.active {
-    background: #4b5563;
-    border-color: #374151;
-  }
+    button,
+    .file-label {
+      border: 1px solid #94a3b8;
+      background: #eef2ff;
+      color: #111827;
+      padding: 8px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 14px;
+      user-select: none;
+    }
 
-  .pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    background: #fafafa;
-    font-size: 13px;
-    color: var(--muted);
-  }
+    button:hover,
+    .file-label:hover {
+      background: #e0e7ff;
+    }
 
-  .layout {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 12px;
-    padding: 12px;
-  }
+    button.active {
+      background: var(--blue);
+      color: #fff;
+      border-color: #1d4ed8;
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, .15) inset;
+    }
 
-  .card {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    box-shadow: 0 1px 2px rgba(0,0,0,.04);
-  }
+    button.secondary.active {
+      background: #4b5563;
+      border-color: #374151;
+    }
 
-  .left {
-    padding: 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    width: 100%;
-  }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fafafa;
+      font-size: 13px;
+      color: var(--muted);
+    }
 
-  .right {
-    padding: 0;
-    width: 100%;
-    overflow: hidden;
-  }
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      padding: 12px;
+    }
 
-  textarea {
-    width: 100%;
-    min-height: 220px;
-    resize: vertical;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    background: #fcfcfd;
-    padding: 10px;
-    font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    color: #111827;
-  }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, .04);
+    }
 
-  .help {
-    font-size: 13px;
-    color: var(--muted);
-    line-height: 1.45;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 10px 12px;
-    background: #fafafa;
-  }
+    .left {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 100%;
+    }
 
-  .help b { color: #111827; }
+    .right {
+      padding: 0;
+      width: 100%;
+      overflow: hidden;
+    }
 
-  .mini-row {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
+    textarea {
+      width: 100%;
+      min-height: 220px;
+      resize: vertical;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fcfcfd;
+      padding: 10px;
+      font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      color: #111827;
+    }
 
-  .mini-row > * { flex: 0 0 auto;}
+    .help {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.45;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      background: #fafafa;
+    }
 
-  .status {
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 10px 12px;
-    background: #fbfdff;
-    font-size: 13px;
-    line-height: 1.5;
-  }
+    .help b {
+      color: #111827;
+    }
 
-  .status .line { display: block; }
-  .status .dim { color: var(--muted); }
-  .status .good { color: var(--green); }
-  .status .warn { color: #b45309; }
+    .constraints-box {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.45;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      background: #fff7f7;
+    }
 
-  .canvas-wrap {
-    position: relative;
-    width: 100%;
-    height: 62vh;
-    background: #fff;
-  }
+    .constraints-box b {
+      color: #111827;
+    }
 
-  canvas {
-    display: block;
-    width: 100%;
-    height: 100%;
-    touch-action: none;
-    cursor: crosshair;
-  }
+    .mini-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
 
-  .overlay {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-  }
+    .mini-row>* {
+      flex: 0 0 auto;
+    }
 
-  .small-note {
-    font-size: 12px;
-    color: var(--muted);
-  }
-  
-  #fitText {
-    white-space: pre-line; /* Заставляет браузер переносить строку на символах \n */
-  }
+    .status {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 12px;
+      background: #fbfdff;
+      font-size: 13px;
+      line-height: 1.5;
+    }
 
-  @media (max-width: 980px) {
-    .layout { grid-template-columns: 1fr; }
-    .left, .right, .canvas-wrap { min-height: auto; height: auto; }
-    .canvas-wrap { height: 68vh; }
-  }
-</style>
+    .status .line {
+      display: block;
+    }
+
+    .status .dim {
+      color: var(--muted);
+    }
+
+    .status .good {
+      color: var(--green);
+    }
+
+    .status .warn {
+      color: #b45309;
+    }
+
+    .canvas-wrap {
+      position: relative;
+      width: 100%;
+      height: 62vh;
+      background: #fff;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+      cursor: crosshair;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .small-note {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    #fitText {
+      white-space: pre-line;
+      /* Заставляет браузер переносить строку на символах \n */
+    }
+
+    .constraint-input {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px;
+        width: 80px;
+        margin-right: 10px;
+      }
+
+    .button-container {
+      display: flex;
+      align-items: center; /* Vertically centers the buttons and the line */
+      gap: 8px;           /* Sets equal spacing around the divider */
+    }
+
+    .divider {
+      width: 1px;          /* Line thickness */
+      height: 24px;        /* Line height relative to your buttons */
+      background-color: #ccc; /* Line color */
+    }
+
+    @media (max-width: 980px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .left,
+      .right,
+      .canvas-wrap {
+        min-height: auto;
+        height: auto;
+      }
+
+      .canvas-wrap {
+        height: 68vh;
+      }
+    }
+  </style>
 </head>
-<body>
-<header>
-  <h1>Обработка временной серии радона с подгонкой по Левенбергу-Марквардту (LMA)</h1>
-</header>
 
-<div class="layout">
-  <section class="left card">
-    <div>
-      <div style="font-weight:600; margin-bottom:6px;">Исходная серия</div>
-      <textarea id="inputText" spellcheck="false" placeholder="Пример таблицы
+<body>
+  <header>
+    <h1>Обработка временной серии радона с подгонкой по Левенбергу-Марквардту (LMA)</h1>
+  </header>
+
+  <div class="layout">
+    <section class="left card">
+      <div>
+        <div style="font-weight:600; margin-bottom:6px;">Исходная серия</div>
+        <textarea id="inputText" spellcheck="false" placeholder="Пример таблицы
 20.05.2026 12:00:00[TAB]123.4
 20.05.2026 13:00:00[TAB]125.2
 20.05.2026 14:00:00[TAB]130.7
 
 Здесь [TAB] - разделитель между колонками. При копировании таблицы из Excel значения уже разделены табуляцией.
 Формат даты и времени зависит от установленных в вашей системе региональных стандартов."></textarea>
-      <div class="small-note" style="margin-top:0px;margin-bottom:6px;">
-        Поддерживаются разделители таб, запятая и точка с запятой. Если есть третья колонка, она может содержать флаг 0/1.
+        <div class="small-note" style="margin-top:0px;margin-bottom:6px;">
+          Поддерживаются разделители таб, запятая и точка с запятой. Если есть третья колонка, она может содержать флаг
+          0/1.
+        </div>
+        <div class="toolbar">
+          <button id="loadTextBtn">Загрузить серию из поля ввода</button>
+          или
+          <button id="pasteBtn">Вставить из буфера</button>
+          <label class="file-label">
+            Загрузить файл из файла CSV/TXT
+            <input id="fileInput" type="file" accept=".csv,.txt,.tsv,text/csv,text/plain" hidden />
+          </label>
+        </div>
       </div>
-	  <div class="toolbar">
-		<button id="loadTextBtn">Загрузить серию из поля ввода</button>
-		или
-		<button id="pasteBtn">Вставить из буфера</button>
-		<label class="file-label">
-			Загрузить файл из файла CSV/TXT
-			<input id="fileInput" type="file" accept=".csv,.txt,.tsv,text/csv,text/plain" hidden />
-		</label>
-	  </div>
+
+      <div class="help">
+        <b>Как работать:</b><br>
+        1) загрузите временную серию в поле для ввода и нажмите «Загрузить из поля для ввода»;<br>
+        2) выберите режим «Флаг 1», «Флаг 0»;<br>
+        3) удерживайте Ctrl и выделяйте интервал точек, которым нужно установить флаг;<br>
+        4) по окончании работы экспортируйте таблицу со всеми данными.
+      </div>
+
+      <div class="status" id="statusBox">
+        <span class="line"><b>Статус:</b> <span id="statusText">данные не загружены</span></span>
+        <span class="line dim" id="cursorText">Курсор: -</span>
+        <span class="line dim" id="fitText">Fit: -</span>
+        <span class="line dim" id="selectionText">Выделение: -</span>
+      </div>
+    </section>
+
+    <div class="constraints-box">
+        <b>Ограничители параметров аппроксимации</b><br>
+        <span>Мин. lambda</span>
+        <input type="number" placeholder="1e-10" value="1e-10" id="lambdaMin" class="constraint-input">
+        <span>Макс. lambda</span>
+        <input type="number" placeholder="2.0" value="2.0" id="lambdaMax" class="constraint-input">
+        <span>Мин. Phi</span>
+        <input type="number" placeholder="1.0" value="1.0" id="phiMin" class="constraint-input">
+        <span>Макс. Phi</span>
+        <input type="number" placeholder="1000.0" value="1000.0" id="phiMax" class="constraint-input">
+        <button id="applyConstraintsBtn">Применить</button>
     </div>
 
-    <div class="help">
-      <b>Как работать:</b><br>
-      1) загрузите временную серию в поле для ввода и нажмите «Загрузить из поля для ввода»;<br>
-      2) выберите режим «Флаг 1», «Флаг 0»;<br>
-      3) удерживайте Ctrl и выделяйте интервал точек, которым нужно установить флаг;<br>
-      4) по окончании работы экспортируйте таблицу со всеми данными.
-    </div>
+    <section class="card" style="padding:10px; margin-top:0px;">
+      <div class="mini-row" style="margin-bottom:10px;">
+        <div class="button-container">
+          <span style="padding:10px;">Выберите флаг</span>
+          <button id="flag1Btn">Флаг 1 (Накопление)</button>
+          <button id="flag0Btn">Флаг 0 (Разбавление)</button>
+          <button id="noneBtn" class="secondary active">Не выбрано</button>
+          <span class="divider"></span>
+          <button id="logYBtn">Log Y: OFF</button>
+          <button id="resetZoomBtn">Сброс масштаба</button>
+          <span class="divider"></span>
+          <button id="exportCsvBtn">Экспорт данных в CSV</button>
+          <button id="exportTxtBtn">Экспорт в TXT</button>
+          <button id="copyBtn">Экспорт в буфер обмена</button>
+        </div>
+      </div>
+      <section class="right card">
+        <div class="canvas-wrap">
+          <canvas id="chart"></canvas>
+          <div class="overlay"></div>
+        </div>
 
-    <div class="status" id="statusBox">
-      <span class="line"><b>Статус:</b> <span id="statusText">данные не загружены</span></span>
-      <span class="line dim" id="cursorText">Курсор: -</span>
-      <span class="line dim" id="fitText">Fit: -</span>
-      <span class="line dim" id="selectionText">Выделение: -</span>
-    </div>
-  </section>
+      </section>
+      <div class="mini-row" style="margin-top:10px;margin-bottom:10px;">
+        <span class="pill">Ctrl + ЛКМ с выделением области - назначить флаг</span>
+        <span class="pill">Ctrl + ПКМ с выделением области - снять флаг</span>
+        <span class="pill">Колесо - масштаб по X вокруг курсора</span>
+        <span class="pill">Shift + Колесо - масштаб по Y вокруг курсора</span>
+        <span class="pill">ЛКМ - панорамирование</span>
+      </div>
 
-  
-<section class="card" style="padding:10px; margin-top:0px;">
-  <div class="mini-row" style="margin-bottom:10px;">
-    <span style="padding:10px;">Выберите флаг</span>
-    <button id="flag1Btn">Флаг 1 (Накопление)</button>
-    <button id="flag0Btn">Флаг 0 (Разбавление)</button>
-    <button id="noneBtn" class="secondary active">Не выбрано</button>
-	<span>|</span>
-	<button id="logYBtn">Log Y: OFF</button>
-    <button id="resetZoomBtn">Сброс масштаба</button>
-	<span>|</span>
-	<button id="exportCsvBtn">Экспорт данных в CSV</button>
-    <button id="exportTxtBtn">Экспорт TXT</button>
-    <button id="copyBtn">Экспорт в буфер обмена</button>
-	
+      <section class="card" style="padding:12px;">
+        <div style="font-weight:600; margin-bottom:8px;">Предпросмотр данных</div>
+        <div style="overflow:auto; max-height:360px; border:1px solid var(--border); border-radius:10px;">
+          <table id="previewTable" style="width:100%; border-collapse:collapse; font-size:12px; text-align:center;">
+            <thead style="position:sticky; top:0; background:#f9fafb;">
+              <tr>
+                <th style="padding:6px; border-bottom:1px solid var(--border);">datetime</th>
+                <th style="padding:6px; border-bottom:1px solid var(--border);">radon</th>
+                <th style="padding:6px; border-bottom:1px solid var(--border);">flag</th>
+                <th style="padding:6px; border-bottom:1px solid var(--border);">C0</th>
+                <th style="padding:6px; border-bottom:1px solid var(--border);">phi</th>
+                <th style="padding:6px; border-bottom:1px solid var(--border);">lambda</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
   </div>
-<section class="right card">
-    <div class="canvas-wrap">
-      <canvas id="chart"></canvas>
-      <div class="overlay"></div>
-    </div>
-	
-</section>
-<div class="mini-row" style="margin-top:10px;margin-bottom:10px;">
-		<span class="pill">Ctrl + ЛКМ с выделением области - назначить флаг</span>
-		<span class="pill">Ctrl + ПКМ с выделением области - снять флаг</span>
-		<span class="pill">Колесо - масштаб по X вокруг курсора</span>
-		<span class="pill">Shift + Колесо - масштаб по Y вокруг курсора</span>
-		<span class="pill">ЛКМ - панорамирование</span>
-    </div>
-	
-  <section class="card" style="padding:12px;">
-    <div style="font-weight:600; margin-bottom:8px;">Предпросмотр данных</div>
-    <div style="overflow:auto; max-height:360px; border:1px solid var(--border); border-radius:10px;">
-      <table id="previewTable" style="width:100%; border-collapse:collapse; font-size:12px; text-align:center;">
-        <thead style="position:sticky; top:0; background:#f9fafb;">
-          <tr>
-            <th style="padding:6px; border-bottom:1px solid var(--border);">datetime</th>
-            <th style="padding:6px; border-bottom:1px solid var(--border);">radon</th>
-            <th style="padding:6px; border-bottom:1px solid var(--border);">flag</th>
-            <th style="padding:6px; border-bottom:1px solid var(--border);">C0</th>
-            <th style="padding:6px; border-bottom:1px solid var(--border);">phi</th>
-            <th style="padding:6px; border-bottom:1px solid var(--border);">lambda</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
-  </section>
-</div>
 
-<script>
-(() => {
-  const $ = id => document.getElementById(id);
-  const canvas = $("chart");
-  const ctx = canvas.getContext("2d");
-  const fileInput = $("fileInput");
-  const inputText = $("inputText");
-  const statusText = $("statusText");
-  const cursorText = $("cursorText");
-  const fitText = $("fitText");
-  const selectionText = $("selectionText");
-  const previewTableBody = document.querySelector("#previewTable tbody");
+  <script>
+    (() => {
+      const $ = id => document.getElementById(id);
+      const canvas = $("chart");
+      const ctx = canvas.getContext("2d");
+      const fileInput = $("fileInput");
+      const inputText = $("inputText");
+      const statusText = $("statusText");
+      const cursorText = $("cursorText");
+      const fitText = $("fitText");
+      const selectionText = $("selectionText");
+      const previewTableBody = document.querySelector("#previewTable tbody");
 
-  const state = {
-    rows: [],
-    dataMinX: 0,
-    dataMaxX: 1,
-    dataMinY: 0,
-    dataMaxY: 1,
-    viewMinX: 0,
-    viewMaxX: 1,
-    viewMinY: 0,
-    viewMaxY: 1,
-    activeFlag: null,   // null | 0 | 1
-    dragging: false,
-    panning: false,
-    selecting: false,
-    dragStart: null,
-    lastPt: null,
-    rect: null,
-    fits: [],
-    needsRender: true,
-    mouseX: null,
-    mouseY: null,
-    cursorIndex: -1,
-	logY: false,
-  };
+      const state = {
+        rows: [],
+        dataMinX: 0,
+        dataMaxX: 1,
+        dataMinY: 0,
+        dataMaxY: 1,
+        viewMinX: 0,
+        viewMaxX: 1,
+        viewMinY: 0,
+        viewMaxY: 1,
+        activeFlag: null,   // null | 0 | 1
+        dragging: false,
+        panning: false,
+        selecting: false,
+        dragStart: null,
+        lastPt: null,
+        rect: null,
+        fits: [],
+        needsRender: true,
+        mouseX: null,
+        mouseY: null,
+        cursorIndex: -1,
+        logY: false,
+      };
 
-  const MODEL_EPS = 1e-12;
-  const PX_THRESH = 9;
-  const M = { l: 82, r: 20, t: 18, b: 58 };	// Отступы от крев canvas для осей и подписей
+      const MODEL_EPS = 1e-12;
+      const PX_THRESH = 9;
+      const M = { l: 82, r: 20, t: 18, b: 58 };	// Отступы от крев canvas для осей и подписей
+      let minLambda = 1e-10;
+      let maxLambda = 2.0;
+      let minPhi = 1.0;
+      let maxPhi = 2000.0;
 
-  function setActiveButton(btn) {
-    [$("flag1Btn"), $("flag0Btn"), $("noneBtn")].forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-  }
-
-  $("flag1Btn").addEventListener("click", () => { state.activeFlag = 1; setActiveButton($("flag1Btn")); });
-  $("flag0Btn").addEventListener("click", () => { state.activeFlag = 0; setActiveButton($("flag0Btn")); });
-  $("noneBtn").addEventListener("click", () => { state.activeFlag = null; setActiveButton($("noneBtn")); });
-
-  $("resetZoomBtn").addEventListener("click", () => {
-    resetView();
-    render();
-  });
-  
-  $("logYBtn").addEventListener("click", () => {
-	  state.logY = !state.logY;
-	  $("logYBtn").textContent =
-		`Log Y: ${state.logY ? "ON" : "OFF"}`;
-	  render();
-	});
-
-  $("loadTextBtn").addEventListener("click", () => {
-    const rows = parseSeriesText(inputText.value || "");
-    if (!rows.length) return alert("Не удалось прочитать таблицу.");
-    loadRows(rows);
-  });
-
-  $("pasteBtn").addEventListener("click", async () => {
-    try {
-      const txt = await navigator.clipboard.readText();
-      if (!txt.trim()) return alert("Буфер обмена пуст или доступ запрещён.");
-      inputText.value = txt;
-      const rows = parseSeriesText(txt);
-      if (!rows.length) return alert("Не удалось прочитать таблицу из буфера.");
-      loadRows(rows);
-    } catch (err) {
-      alert("Не удалось прочитать буфер обмена. Вставьте текст вручную в textarea.");
-    }
-  });
-
-  fileInput.addEventListener("change", async e => {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-    const txt = await file.text();
-    inputText.value = txt;
-    const rows = parseSeriesText(txt);
-    if (!rows.length) return alert("Не удалось прочитать файл.");
-    loadRows(rows);
-  });
-
-  $("exportCsvBtn").addEventListener("click", () => exportData(",", "csv"));
-  $("exportTxtBtn").addEventListener("click", () => exportData("\t", "txt"));
-  $("copyBtn").addEventListener("click", async () => {
-    const text = buildExportText("\t");
-    try {
-      await navigator.clipboard.writeText(text);
-      statusText.textContent = "таблица скопирована в буфер обмена";
-    } catch {
-      alert("Не удалось скопировать в буфер обмена.");
-    }
-  });
-
-  function updateStatus(msg, kind = "") {
-    statusText.textContent = msg;
-    statusText.className = kind;
-  }
-
-  function parseNumber(s) {
-    if (s == null) return NaN;
-    const v = String(s).trim().replace(/,/g, ".");
-    if (!v) return NaN;
-    return Number(v);
-  }
-
-  function detectDelimiter(line) {
-    if (line.includes("\t")) return "\t";
-    if (line.includes(";")) return ";";
-    if (line.includes(",")) return ",";
-    return "ws";
-  }
-
-  function splitLine(line, delim) {
-    if (delim === "ws") return line.trim().split(/\s+/);
-    return line.split(delim).map(s => s.trim());
-  }
-
-  function tryParseDateTime(s) {
-    const str = String(s).trim();
-    if (!str) return NaN;
-
-    // Fast path for ISO / browser parsable strings.
-    let d = new Date(str);
-    if (!isNaN(d.getTime())) return d.getTime();
-
-    // Common formats: dd.mm.yyyy hh:mm:ss, dd/mm/yyyy hh:mm:ss, yyyy-mm-dd hh:mm:ss
-    let m = str.match(/^(\d{1,2})[.\/\-](\d{1,2})[.\/\-](\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
-    if (m) {
-      const a = +m[1], b = +m[2], c = +m[3], hh = +(m[4] || 0), mm = +(m[5] || 0), ss = +(m[6] || 0);
-      // Prefer day-month-year interpretation.
-      d = new Date(c, b - 1, a, hh, mm, ss);
-      if (!isNaN(d.getTime())) return d.getTime();
-    }
-
-    m = str.match(/^(\d{4})[.\/\-](\d{1,2})[.\/\-](\d{1,2})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
-    if (m) {
-      const y = +m[1], mo = +m[2], da = +m[3], hh = +(m[4] || 0), mm = +(m[5] || 0), ss = +(m[6] || 0);
-      d = new Date(y, mo - 1, da, hh, mm, ss);
-      if (!isNaN(d.getTime())) return d.getTime();
-    }
-
-    return NaN;
-  }
-
-  function formatDateTime(ms) {
-    const d = new Date(ms);
-    const pad = n => String(n).padStart(2, "0");
-    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-  }
-
-  function parseSeriesText(text) {
-    const lines = String(text || "").split(/\r?\n/).map(s => s.trim()).filter(Boolean);
-    if (lines.length < 1) return [];
-
-    const delim = detectDelimiter(lines[0]);
-    const rows = [];
-
-    for (const line of lines) {
-      const parts = splitLine(line, delim);
-      if (parts.length < 2) continue;
-
-      // Try to use the last column as flag when present.
-      let maybeFlag = null;
-      let flagCol = null;
-      const last = parts[parts.length - 1];
-      if (last === "0" || last === "1") {
-        maybeFlag = Number(last);
-        flagCol = parts.length - 1;
+      function setActiveButton(btn) {
+        [$("flag1Btn"), $("flag0Btn"), $("noneBtn")].forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
       }
 
-      // Heuristics:
-      // 1) datetime in first cell, value in second/third cell.
-      // 2) datetime split into date + time in first two cells.
-      let t = NaN, y = NaN;
+      $("flag1Btn").addEventListener("click", () => { state.activeFlag = 1; setActiveButton($("flag1Btn")); });
+      $("flag0Btn").addEventListener("click", () => { state.activeFlag = 0; setActiveButton($("flag0Btn")); });
+      $("noneBtn").addEventListener("click", () => { state.activeFlag = null; setActiveButton($("noneBtn")); });
 
-      if (parts.length >= 3) {
-        const dt1 = tryParseDateTime(parts[0]);
-        const val1 = parseNumber(parts[1]);
-        if (isFinite(dt1) && isFinite(val1)) {
-          t = dt1; y = val1;
+      $("resetZoomBtn").addEventListener("click", () => {
+        resetView();
+        render();
+      });
+
+      $("logYBtn").addEventListener("click", () => {
+        state.logY = !state.logY;
+        $("logYBtn").textContent =
+          `Log Y: ${state.logY ? "ON" : "OFF"}`;
+        render();
+      });
+
+      $("loadTextBtn").addEventListener("click", () => {
+        const rows = parseSeriesText(inputText.value || "");
+        if (!rows.length) return alert("Не удалось прочитать таблицу.");
+        loadRows(rows);
+      });
+
+      $("pasteBtn").addEventListener("click", async () => {
+        try {
+          const txt = await navigator.clipboard.readText();
+          if (!txt.trim()) return alert("Буфер обмена пуст или доступ запрещён.");
+          inputText.value = txt;
+          const rows = parseSeriesText(txt);
+          if (!rows.length) return alert("Не удалось прочитать таблицу из буфера.");
+          loadRows(rows);
+        } catch (err) {
+          alert("Не удалось прочитать буфер обмена. Вставьте текст вручную в textarea.");
+        }
+      });
+
+      $("applyConstraintsBtn").addEventListener("click", () => applyConstraints());
+
+      fileInput.addEventListener("change", async e => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const txt = await file.text();
+        inputText.value = txt;
+        const rows = parseSeriesText(txt);
+        if (!rows.length) return alert("Не удалось прочитать файл.");
+        loadRows(rows);
+      });
+
+      $("exportCsvBtn").addEventListener("click", () => exportData(",", "csv"));
+      $("exportTxtBtn").addEventListener("click", () => exportData("\t", "txt"));
+      $("copyBtn").addEventListener("click", async () => {
+        const text = buildExportText("\t");
+        try {
+          await navigator.clipboard.writeText(text);
+          statusText.textContent = "таблица скопирована в буфер обмена";
+        } catch {
+          alert("Не удалось скопировать в буфер обмена.");
+        }
+      });
+
+      function updateStatus(msg, kind = "") {
+        statusText.textContent = msg;
+        statusText.className = kind;
+      }
+
+      function parseNumber(s) {
+        if (s == null) return NaN;
+        const v = String(s).trim().replace(/,/g, ".");
+        if (!v) return NaN;
+        return Number(v);
+      }
+
+      function detectDelimiter(line) {
+        if (line.includes("\t")) return "\t";
+        if (line.includes(";")) return ";";
+        if (line.includes(",")) return ",";
+        return "ws";
+      }
+
+      function splitLine(line, delim) {
+        if (delim === "ws") return line.trim().split(/\s+/);
+        return line.split(delim).map(s => s.trim());
+      }
+
+      function tryParseDateTime(s) {
+        const str = String(s).trim();
+        if (!str) return NaN;
+
+        // Fast path for ISO / browser parsable strings.
+        let d = new Date(str);
+        if (!isNaN(d.getTime())) return d.getTime();
+
+        // Common formats: dd.mm.yyyy hh:mm:ss, dd/mm/yyyy hh:mm:ss, yyyy-mm-dd hh:mm:ss
+        let m = str.match(/^(\d{1,2})[.\/\-](\d{1,2})[.\/\-](\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+        if (m) {
+          const a = +m[1], b = +m[2], c = +m[3], hh = +(m[4] || 0), mm = +(m[5] || 0), ss = +(m[6] || 0);
+          // Prefer day-month-year interpretation.
+          d = new Date(c, b - 1, a, hh, mm, ss);
+          if (!isNaN(d.getTime())) return d.getTime();
+        }
+
+        m = str.match(/^(\d{4})[.\/\-](\d{1,2})[.\/\-](\d{1,2})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+        if (m) {
+          const y = +m[1], mo = +m[2], da = +m[3], hh = +(m[4] || 0), mm = +(m[5] || 0), ss = +(m[6] || 0);
+          d = new Date(y, mo - 1, da, hh, mm, ss);
+          if (!isNaN(d.getTime())) return d.getTime();
+        }
+
+        return NaN;
+      }
+
+      function formatDateTime(ms) {
+        const d = new Date(ms);
+        const pad = n => String(n).padStart(2, "0");
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+      }
+
+      function parseSeriesText(text) {
+        const lines = String(text || "").split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+        if (lines.length < 1) return [];
+
+        const delim = detectDelimiter(lines[0]);
+        const rows = [];
+
+        for (const line of lines) {
+          const parts = splitLine(line, delim);
+          if (parts.length < 2) continue;
+
+          // Try to use the last column as flag when present.
+          let maybeFlag = null;
+          let flagCol = null;
+          const last = parts[parts.length - 1];
+          if (last === "0" || last === "1") {
+            maybeFlag = Number(last);
+            flagCol = parts.length - 1;
+          }
+
+          // Heuristics:
+          // 1) datetime in first cell, value in second/third cell.
+          // 2) datetime split into date + time in first two cells.
+          let t = NaN, y = NaN;
+
+          if (parts.length >= 3) {
+            const dt1 = tryParseDateTime(parts[0]);
+            const val1 = parseNumber(parts[1]);
+            if (isFinite(dt1) && isFinite(val1)) {
+              t = dt1; y = val1;
+            } else {
+              const dt2 = tryParseDateTime(parts[0] + " " + parts[1]);
+              const val2 = parseNumber(parts[2]);
+              if (isFinite(dt2) && isFinite(val2)) {
+                t = dt2; y = val2;
+                if (flagCol === 3) maybeFlag = Number(parts[3]);
+              }
+            }
+          }
+
+          if (!isFinite(t) || !isFinite(y)) {
+            // Minimal fallback: first cell timestamp, last-but-one value.
+            const dt = tryParseDateTime(parts[0]);
+            const val = parseNumber(parts[1]);
+            if (!isFinite(dt) || !isFinite(val)) continue;
+            t = dt; y = val;
+          }
+
+          rows.push({ t, y, flag: maybeFlag });
+        }
+
+        // Sort by time if needed.
+        rows.sort((a, b) => a.t - b.t);
+        return rows;
+      }
+
+      function loadRows(rows) {
+        if (!rows.length) return;
+        state.rows = rows.map(r => ({
+          t: r.t,
+          y: r.y,
+          flag: r.flag === 0 || r.flag === 1 ? r.flag : null,
+          fit: null
+        }));
+        resetView();
+        recomputeFits();
+        updateSummary();
+        updatePreviewTable();
+        render();
+        updateStatus(`загружено точек: ${state.rows.length}`, "good");
+      }
+
+      function applyConstraints() {
+        const minLambdaStr = $("lambdaMin").value;
+        const maxLambdaStr = $("lambdaMax").value;
+        const minPhiStr = $("phiMin").value;
+        const maxPhiStr = $("phiMax").value;
+
+        if (!Number.isFinite(Number(minLambdaStr)) || minLambdaStr === ''){
+          alert("Неверное число в поле для Lambda min");
+          return;
+        }
+        if (!Number.isFinite(Number(maxLambdaStr)) || maxLambdaStr === ''){
+          alert("Неверное число в поле для Lambda max");
+          return;
+        }
+        if (!Number.isFinite(Number(minPhiStr)) || minPhiStr === ''){
+          alert("Неверное число в поле для Phi min");
+          return;
+        }
+        if (!Number.isFinite(Number(maxPhiStr)) || maxPhiStr === ''){
+          alert("Неверное число в поле для Phi max");
+          return;
+        }
+
+        if (Number(minLambdaStr) >= Number(maxLambdaStr)){
+          alert("Минимальное значение Lambda не может быть больше максимального");
+          return;
+        }
+
+        if (Number(minPhiStr) >= Number(maxPhiStr)){
+          alert("Минимальное значение Phi не может быть больше максимального");
+          return;
+        }
+
+        minLambda = parseFloat(minLambdaStr) ?? 1e-10;
+        maxLambda = parseFloat(maxLambdaStr) ?? 2.0;
+        minPhi = parseFloat(minPhiStr) ?? 1;
+        maxPhi = parseFloat(maxPhiStr) ?? 2000.0;
+
+        console.log("New constraints:");
+        console.log(`Lambda min: ${minLambda}, Lambda max: ${maxLambda}, Phi min: ${minPhi}, Phi max: ${maxPhi}`);
+
+        recomputeFits();
+        updateSummary();
+        updatePreviewTable();
+        render();
+      }
+
+      function resetView() {
+        const xs = state.rows.map(r => r.t).filter(Number.isFinite);
+        const ys = state.rows.map(r => r.y).filter(Number.isFinite);
+        if (!xs.length || !ys.length) {
+          state.viewMinX = 0; state.viewMaxX = 1;
+          state.viewMinY = 0; state.viewMaxY = 1;
+          return;
+        }
+        const xmin = Math.min(...xs), xmax = Math.max(...xs);
+        const ymin = Math.min(...ys), ymax = Math.max(...ys);
+        const dx = xmax - xmin || 1;
+        const dy = ymax - ymin || 1;
+        state.dataMinX = xmin; state.dataMaxX = xmax;
+        state.dataMinY = ymin; state.dataMaxY = ymax;
+        state.viewMinX = xmin - dx * 0.05;
+        state.viewMaxX = xmax + dx * 0.05;
+        state.viewMinY = ymin - dy * 0.08;
+        state.viewMaxY = ymax + dy * 0.08;
+      }
+
+      function transformY(y) {
+        if (!state.logY) return y;
+        // защита от <=0
+        return Math.log10(Math.max(y, 1e-12));
+      }
+
+      function inverseTransformY(y) {
+        if (!state.logY) return y;
+        return Math.pow(10, y);
+      }
+
+      function xToPx(x) {
+        const w = canvas.clientWidth - M.l - M.r; // Ширина области просмотра
+        return M.l + (x - state.viewMinX) / (state.viewMaxX - state.viewMinX) * w;
+      }
+      function yToPx(y) {
+        const h = canvas.clientHeight - M.t - M.b;
+        const yy = transformY(y);
+        const minY = transformY(state.viewMinY);
+        const maxY = transformY(state.viewMaxY);
+        return (M.t + (1 - (yy - minY) / (maxY - minY)) * h);
+      }
+      function pxToX(px) {
+        const w = canvas.clientWidth - M.l - M.r;
+        return state.viewMinX + (px - M.l) / w * (state.viewMaxX - state.viewMinX);
+      }
+      function pxToY(py) {
+        const h = canvas.clientHeight - M.t - M.b;
+        const minY = transformY(state.viewMinY);
+        const maxY = transformY(state.viewMaxY);
+        const yy = maxY - ((py - M.t) / h) * (maxY - minY);
+        return inverseTransformY(yy);
+      }
+
+      function niceNum(range, round) {
+        const exponent = Math.floor(Math.log10(range));
+        const fraction = range / Math.pow(10, exponent);
+        let niceFraction;
+        if (round) {
+          if (fraction < 1.5) niceFraction = 1;
+          else if (fraction < 3) niceFraction = 2;
+          else if (fraction < 7) niceFraction = 5;
+          else niceFraction = 10;
         } else {
-          const dt2 = tryParseDateTime(parts[0] + " " + parts[1]);
-          const val2 = parseNumber(parts[2]);
-          if (isFinite(dt2) && isFinite(val2)) {
-            t = dt2; y = val2;
-            if (flagCol === 3) maybeFlag = Number(parts[3]);
+          if (fraction <= 1) niceFraction = 1;
+          else if (fraction <= 2) niceFraction = 2;
+          else if (fraction <= 5) niceFraction = 5;
+          else niceFraction = 10;
+        }
+        return niceFraction * Math.pow(10, exponent);
+      }
+
+      function niceTicks(min, max, count = 7) {
+        if (!isFinite(min) || !isFinite(max) || min === max) return [min];
+        const range = niceNum(max - min, false);
+        const step = niceNum(range / (count - 1), true);
+        const start = Math.floor(min / step) * step;
+        const stop = Math.ceil(max / step) * step + step * 0.5;
+        const vals = [];
+        for (let v = start; v <= stop; v += step) vals.push(+v.toFixed(12));
+        return vals;
+      }
+
+      function formatY(v) {
+        const abs = Math.abs(v);
+        if (abs >= 1000 || (abs > 0 && abs < 0.01)) return v.toExponential(2);
+        if (abs >= 100) return v.toFixed(0);
+        if (abs >= 10) return v.toFixed(1);
+        if (abs >= 1) return v.toFixed(2);
+        return v.toFixed(3);
+      }
+
+      function chooseTimeFormatter(rangeMs) {
+        const day = 86400000;
+        const hour = 3600000;
+        const minute = 60000;
+        if (rangeMs >= 7 * day) return ms => {
+          const d = new Date(ms); return d.toLocaleDateString();
+        };
+        if (rangeMs >= 2 * day) return ms => {
+          const d = new Date(ms);
+          return d.toLocaleDateString([], { month: "2-digit", day: "2-digit" }) + "\n" + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        };
+        if (rangeMs >= 2 * hour) return ms => new Date(ms).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        if (rangeMs >= 5 * minute) return ms => new Date(ms).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+        return ms => new Date(ms).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      }
+
+      function segmentRuns() {
+        const runs = [];
+        let i = 0;
+        while (i < state.rows.length) {
+          const flag = state.rows[i].flag;
+          let j = i + 1;
+          while (j < state.rows.length && state.rows[j].flag === flag) j++;
+          runs.push({ start: i, end: j, flag });
+          i = j;
+        }
+        return runs;
+      }
+
+      function model(tHours, lambda, phi, C0) {
+        return C0 * Math.exp(-lambda * tHours) + (phi / lambda) * (1 - Math.exp(-lambda * tHours));
+      }
+
+      function fitSegmentLM(indices) {
+        const pts = indices.map(i => state.rows[i]).filter(p => isFinite(p.t) && isFinite(p.y));
+        if (pts.length < 3) return null;
+
+        const t0 = pts[0].t;
+        const times = pts.map(p => (p.t - t0) / 3600000.0); // hours
+        const ys = pts.map(p => p.y);
+        const C0 = ys[0];
+
+        let lambda = 0.01;
+        let phi = Math.max(minPhi, Math.min(maxPhi, ys[Math.max(ys.length - 1, 0)] * lambda));
+        let mu = 1e-3;
+        let bestErr = Infinity;
+        let best = { lambda, phi };
+
+        const sse = (lam, ph) => {
+          let s = 0;
+          for (let k = 0; k < times.length; k++) {
+            const r = ys[k] - model(times[k], lam, ph, C0);
+            s += r * r;
+          }
+          return s;
+        };
+
+        bestErr = sse(lambda, phi);
+
+        for (let iter = 0; iter < 80; iter++) {
+          let j11 = 0, j12 = 0, j22 = 0;
+          let g1 = 0, g2 = 0;
+
+          for (let k = 0; k < times.length; k++) {
+            const t = times[k];
+            const y = ys[k];
+            const yhat = model(t, lambda, phi, C0);
+            const r = y - yhat;
+
+            const dl = Math.max(1e-6, Math.abs(lambda) * 1e-6);
+            const dp = Math.max(1e-6, Math.abs(phi) * 1e-6);
+            const dYdLambda = (model(t, lambda + dl, phi, C0) - model(t, Math.max(MODEL_EPS, lambda - dl), phi, C0)) / (2 * dl);
+            const dYdPhi = (model(t, lambda, phi + dp, C0) - model(t, lambda, Math.max(0, phi - dp), C0)) / (2 * dp);
+
+            j11 += dYdLambda * dYdLambda;
+            j12 += dYdLambda * dYdPhi;
+            j22 += dYdPhi * dYdPhi;
+            g1 += dYdLambda * r;
+            g2 += dYdPhi * r;
+          }
+
+          // Solve (J + mu I) delta = g
+          const a = j11 + mu, b = j12, c = j12, d = j22 + mu;
+          const det = a * d - b * c;
+          if (!isFinite(det) || Math.abs(det) < 1e-18) break;
+          const dLambda = (g1 * d - b * g2) / det;
+          const dPhi = (a * g2 - c * g1) / det;
+
+          let candLambda = lambda + dLambda;
+          let candPhi = phi + dPhi;
+          candLambda = Math.max(minLambda, Math.min(maxLambda, candLambda));
+          candPhi = Math.max(minPhi, Math.min(maxPhi, candPhi));
+
+          const err = sse(candLambda, candPhi);
+          if (err < bestErr) {
+            lambda = candLambda;
+            phi = candPhi;
+            bestErr = err;
+            best = { lambda, phi };
+            mu *= 0.7;
+          } else {
+            mu *= 2;
+          }
+          if (Math.abs(dLambda) < 1e-10 && Math.abs(dPhi) < 1e-10) break;
+        }
+
+        return { t0, lambda: best.lambda, phi: best.phi, C0, rmse: Math.sqrt(bestErr / times.length), start: indices[0], end: indices[indices.length - 1] + 1 };
+      }
+
+      function recomputeFits() {
+        state.fits = [];
+        const runs = segmentRuns();
+        for (const run of runs) {
+          if (run.flag === 0 || run.flag === 1) {
+            const idxs = [];
+            for (let i = run.start; i < run.end; i++) idxs.push(i);
+            const fit = fitSegmentLM(idxs);
+            if (fit) {
+              fit.flag = run.flag;
+              state.fits.push(fit);
+              for (let i = run.start; i < run.end; i++) state.rows[i].fit = fit;
+            }
           }
         }
       }
 
-      if (!isFinite(t) || !isFinite(y)) {
-        // Minimal fallback: first cell timestamp, last-but-one value.
-        const dt = tryParseDateTime(parts[0]);
-        const val = parseNumber(parts[1]);
-        if (!isFinite(dt) || !isFinite(val)) continue;
-        t = dt; y = val;
-      }
-
-      rows.push({ t, y, flag: maybeFlag });
-    }
-
-    // Sort by time if needed.
-    rows.sort((a, b) => a.t - b.t);
-    return rows;
-  }
-
-  function loadRows(rows) {
-    if (!rows.length) return;
-    state.rows = rows.map(r => ({
-      t: r.t,
-      y: r.y,
-      flag: r.flag === 0 || r.flag === 1 ? r.flag : null,
-      fit: null
-    }));
-    resetView();
-    recomputeFits();
-    updateSummary();
-    updatePreviewTable();
-    render();
-    updateStatus(`загружено точек: ${state.rows.length}`, "good");
-  }
-
-  function resetView() {
-    const xs = state.rows.map(r => r.t).filter(Number.isFinite);
-    const ys = state.rows.map(r => r.y).filter(Number.isFinite);
-    if (!xs.length || !ys.length) {
-      state.viewMinX = 0; state.viewMaxX = 1;
-      state.viewMinY = 0; state.viewMaxY = 1;
-      return;
-    }
-    const xmin = Math.min(...xs), xmax = Math.max(...xs);
-    const ymin = Math.min(...ys), ymax = Math.max(...ys);
-    const dx = xmax - xmin || 1;
-    const dy = ymax - ymin || 1;
-    state.dataMinX = xmin; state.dataMaxX = xmax;
-    state.dataMinY = ymin; state.dataMaxY = ymax;
-    state.viewMinX = xmin - dx * 0.05;
-    state.viewMaxX = xmax + dx * 0.05;
-    state.viewMinY = ymin - dy * 0.08;
-    state.viewMaxY = ymax + dy * 0.08;
-  }
-
-	function transformY(y) {
-	  if (!state.logY) return y;
-	  // защита от <=0
-	  return Math.log10(Math.max(y, 1e-12));
-	}
-
-	function inverseTransformY(y) {
-	  if (!state.logY) return y;
-	  return Math.pow(10, y);
-	}
-
-  function xToPx(x) {
-    const w = canvas.clientWidth - M.l - M.r; // Ширина области просмотра
-    return M.l + (x - state.viewMinX) / (state.viewMaxX - state.viewMinX) * w;
-  }
-  function yToPx(y) {
-	  const h = canvas.clientHeight - M.t - M.b;
-	  const yy = transformY(y);
-	  const minY = transformY(state.viewMinY);
-	  const maxY = transformY(state.viewMaxY);
-	  return (M.t + (1 - (yy - minY) / (maxY - minY)) * h);
-  }
-  function pxToX(px) {
-    const w = canvas.clientWidth - M.l - M.r;
-    return state.viewMinX + (px - M.l) / w * (state.viewMaxX - state.viewMinX);
-  }
-  function pxToY(py) {
-	  const h = canvas.clientHeight - M.t - M.b;
-	  const minY = transformY(state.viewMinY);
-	  const maxY = transformY(state.viewMaxY);
-	  const yy = maxY - ((py - M.t) / h) * (maxY - minY);
-	  return inverseTransformY(yy);
-	}
-
-  function niceNum(range, round) {
-    const exponent = Math.floor(Math.log10(range));
-    const fraction = range / Math.pow(10, exponent);
-    let niceFraction;
-    if (round) {
-      if (fraction < 1.5) niceFraction = 1;
-      else if (fraction < 3) niceFraction = 2;
-      else if (fraction < 7) niceFraction = 5;
-      else niceFraction = 10;
-    } else {
-      if (fraction <= 1) niceFraction = 1;
-      else if (fraction <= 2) niceFraction = 2;
-      else if (fraction <= 5) niceFraction = 5;
-      else niceFraction = 10;
-    }
-    return niceFraction * Math.pow(10, exponent);
-  }
-
-  function niceTicks(min, max, count = 7) {
-    if (!isFinite(min) || !isFinite(max) || min === max) return [min];
-    const range = niceNum(max - min, false);
-    const step = niceNum(range / (count - 1), true);
-    const start = Math.floor(min / step) * step;
-    const stop = Math.ceil(max / step) * step + step * 0.5;
-    const vals = [];
-    for (let v = start; v <= stop; v += step) vals.push(+v.toFixed(12));
-    return vals;
-  }
-
-  function formatY(v) {
-    const abs = Math.abs(v);
-    if (abs >= 1000 || (abs > 0 && abs < 0.01)) return v.toExponential(2);
-    if (abs >= 100) return v.toFixed(0);
-    if (abs >= 10) return v.toFixed(1);
-    if (abs >= 1) return v.toFixed(2);
-    return v.toFixed(3);
-  }
-
-  function chooseTimeFormatter(rangeMs) {
-    const day = 86400000;
-    const hour = 3600000;
-    const minute = 60000;
-    if (rangeMs >= 7 * day) return ms => {
-      const d = new Date(ms); return d.toLocaleDateString();
-    };
-    if (rangeMs >= 2 * day) return ms => {
-      const d = new Date(ms);
-      return d.toLocaleDateString([], { month: "2-digit", day: "2-digit" }) + "\n" + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    };
-    if (rangeMs >= 2 * hour) return ms => new Date(ms).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    if (rangeMs >= 5 * minute) return ms => new Date(ms).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-    return ms => new Date(ms).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-  }
-
-  function segmentRuns() {
-    const runs = [];
-    let i = 0;
-    while (i < state.rows.length) {
-      const flag = state.rows[i].flag;
-      let j = i + 1;
-      while (j < state.rows.length && state.rows[j].flag === flag) j++;
-      runs.push({ start: i, end: j, flag });
-      i = j;
-    }
-    return runs;
-  }
-
-  function model(tHours, lambda, phi, C0) {
-    return C0 * Math.exp(-lambda * tHours) + (phi / lambda) * (1 - Math.exp(-lambda * tHours));
-  }
-
-  function fitSegmentLM(indices) {
-    const pts = indices.map(i => state.rows[i]).filter(p => isFinite(p.t) && isFinite(p.y));
-    if (pts.length < 3) return null;
-
-    const t0 = pts[0].t;
-    const times = pts.map(p => (p.t - t0) / 3600000.0); // hours
-    const ys = pts.map(p => p.y);
-    const C0 = ys[0];
-
-    let lambda = 0.01;
-    let phi = Math.max(0, Math.min(2000, ys[Math.max(ys.length - 1, 0)] * lambda));
-    let mu = 1e-3;
-    let bestErr = Infinity;
-    let best = { lambda, phi };
-
-    const sse = (lam, ph) => {
-      let s = 0;
-      for (let k = 0; k < times.length; k++) {
-        const r = ys[k] - model(times[k], lam, ph, C0);
-        s += r * r;
-      }
-      return s;
-    };
-
-    bestErr = sse(lambda, phi);
-
-    for (let iter = 0; iter < 80; iter++) {
-      let j11 = 0, j12 = 0, j22 = 0;
-      let g1 = 0, g2 = 0;
-
-      for (let k = 0; k < times.length; k++) {
-        const t = times[k];
-        const y = ys[k];
-        const yhat = model(t, lambda, phi, C0);
-        const r = y - yhat;
-
-        const dl = Math.max(1e-6, Math.abs(lambda) * 1e-6);
-        const dp = Math.max(1e-6, Math.abs(phi) * 1e-6);
-        const dYdLambda = (model(t, lambda + dl, phi, C0) - model(t, Math.max(MODEL_EPS, lambda - dl), phi, C0)) / (2 * dl);
-        const dYdPhi = (model(t, lambda, phi + dp, C0) - model(t, lambda, Math.max(0, phi - dp), C0)) / (2 * dp);
-
-        j11 += dYdLambda * dYdLambda;
-        j12 += dYdLambda * dYdPhi;
-        j22 += dYdPhi * dYdPhi;
-        g1 += dYdLambda * r;
-        g2 += dYdPhi * r;
-      }
-
-      // Solve (J + mu I) delta = g
-      const a = j11 + mu, b = j12, c = j12, d = j22 + mu;
-      const det = a * d - b * c;
-      if (!isFinite(det) || Math.abs(det) < 1e-18) break;
-      const dLambda = (g1 * d - b * g2) / det;
-      const dPhi = (a * g2 - c * g1) / det;
-
-      let candLambda = lambda + dLambda;
-      let candPhi = phi + dPhi;
-      candLambda = Math.max(1e-10, Math.min(2.0, candLambda));
-      candPhi = Math.max(0, Math.min(2000, candPhi));
-
-      const err = sse(candLambda, candPhi);
-      if (err < bestErr) {
-        lambda = candLambda;
-        phi = candPhi;
-        bestErr = err;
-        best = { lambda, phi };
-        mu *= 0.7;
-      } else {
-        mu *= 2;
-      }
-      if (Math.abs(dLambda) < 1e-10 && Math.abs(dPhi) < 1e-10) break;
-    }
-
-    return { t0, lambda: best.lambda, phi: best.phi, C0, rmse: Math.sqrt(bestErr / times.length), start: indices[0], end: indices[indices.length - 1] + 1 };
-  }
-
-  function recomputeFits() {
-    state.fits = [];
-    const runs = segmentRuns();
-    for (const run of runs) {
-      if (run.flag === 0 || run.flag === 1) {
-        const idxs = [];
-        for (let i = run.start; i < run.end; i++) idxs.push(i);
-        const fit = fitSegmentLM(idxs);
-        if (fit) {
-          fit.flag = run.flag;
-          state.fits.push(fit);
-          for (let i = run.start; i < run.end; i++) state.rows[i].fit = fit;
+      function applyFlagToIndices(indices, flagValue) {
+        let changed = false;
+        for (const i of indices) {
+          if (i < 0 || i >= state.rows.length) continue;
+          const next = flagValue === null ? null : (flagValue === 0 ? 0 : 1);
+          if (state.rows[i].flag !== next) {
+            state.rows[i].flag = next;
+            state.rows[i].fit = null;
+            changed = true;
+          }
+        }
+        if (changed) {
+          recomputeFits();
+          updateSummary();
+          render();
         }
       }
-    }
-  }
 
-  function applyFlagToIndices(indices, flagValue) {
-    let changed = false;
-    for (const i of indices) {
-      if (i < 0 || i >= state.rows.length) continue;
-      const next = flagValue === null ? null : (flagValue === 0 ? 0 : 1);
-      if (state.rows[i].flag !== next) {
-        state.rows[i].flag = next;
-        state.rows[i].fit = null;
-        changed = true;
+      function nearestPoint(px, py) {
+        let best = { idx: -1, dist2: Infinity };
+        for (let i = 0; i < state.rows.length; i++) {
+          const r = state.rows[i];
+          if (!isFinite(r.t) || !isFinite(r.y)) continue;
+          const x = xToPx(r.t);
+          const y = yToPx(r.y);
+          const dx = x - px;
+          const dy = y - py;
+          const d2 = dx * dx + dy * dy;
+          if (d2 < best.dist2) best = { idx: i, dist2: d2 };
+        }
+        return best;
       }
-    }
-    if (changed) {
-      recomputeFits();
-      updateSummary();
-      render();
-    }
-  }
 
-  function nearestPoint(px, py) {
-    let best = { idx: -1, dist2: Infinity };
-    for (let i = 0; i < state.rows.length; i++) {
-      const r = state.rows[i];
-      if (!isFinite(r.t) || !isFinite(r.y)) continue;
-      const x = xToPx(r.t);
-      const y = yToPx(r.y);
-      const dx = x - px;
-      const dy = y - py;
-      const d2 = dx*dx + dy*dy;
-      if (d2 < best.dist2) best = { idx: i, dist2: d2 };
-    }
-    return best;
-  }
-
-  function visibleRangeIndices(x0, x1) {
-    const lo = Math.min(x0, x1), hi = Math.max(x0, x1);
-    const idxs = [];
-    for (let i = 0; i < state.rows.length; i++) {
-      const t = state.rows[i].t;
-      if (t >= lo && t <= hi) idxs.push(i);
-    }
-    return idxs;
-  }
-
-  function drawGridAndAxes() {
-    const W = canvas.clientWidth;
-    const H = canvas.clientHeight;
-    const x0 = M.l, y0 = M.t, x1 = W - M.r, y1 = H - M.b;
-
-    // frame + grid
-    ctx.save();
-    ctx.fillStyle = "#fff";
-    ctx.fillRect(0, 0, W, H);
-
-    ctx.strokeStyle = "#e5e7eb";
-    ctx.lineWidth = 1;
-
-    let yTicks;
-	if (state.logY) {
-	  const minPow = Math.floor(
-		Math.log10(Math.max(state.viewMinY, 1e-12))
-	  );
-
-	  const maxPow = Math.ceil(
-		Math.log10(Math.max(state.viewMaxY, 1e-12))
-	  );
-	  yTicks = [];
-	  for (let p = minPow; p <= maxPow; p++) {
-		yTicks.push(Math.pow(10, p));
-	  }
-	} else {
-	  yTicks = niceTicks(
-		state.viewMinY,
-		state.viewMaxY,
-		7
-	  );
-	}
-    for (const v of yTicks) {
-      const y = yToPx(v);
-      ctx.beginPath();
-      ctx.moveTo(x0, y);
-      ctx.lineTo(x1, y);
-      ctx.stroke();
-    }
-
-    const xTicks = niceTicks(state.viewMinX, state.viewMaxX, 7);
-    for (const v of xTicks) {
-      const x = xToPx(v);
-      ctx.beginPath();
-      ctx.moveTo(x, y0);
-      ctx.lineTo(x, y1);
-      ctx.stroke();
-    }
-
-    // axes lines
-    ctx.strokeStyle = "#374151";
-    ctx.lineWidth = 1.2;
-    ctx.beginPath();
-    ctx.moveTo(x0, y0);
-    ctx.lineTo(x0, y1);
-    ctx.lineTo(x1, y1);
-    ctx.stroke();
-
-    // ticks + labels
-    ctx.fillStyle = "#111827";
-    ctx.strokeStyle = "#9ca3af";
-    ctx.lineWidth = 1;
-    ctx.font = "12px system-ui, sans-serif";
-
-    ctx.textAlign = "right";
-    ctx.textBaseline = "middle";
-    for (const v of yTicks) {
-      const y = yToPx(v);
-      ctx.beginPath();
-      ctx.moveTo(x0 - 5, y);
-      ctx.lineTo(x0, y);
-      ctx.stroke();
-      ctx.fillText(
-	  state.logY
-		? `10^${Math.round(Math.log10(v))}`
-		: formatY(v),
-	  x0 - 8,
-	  y
-	);
-    }
-
-    const fmtTime = chooseTimeFormatter(state.viewMaxX - state.viewMinX);
-    ctx.textAlign = "center";
-    ctx.textBaseline = "top";
-    for (const v of xTicks) {
-      const x = xToPx(v);
-      ctx.beginPath();
-      ctx.moveTo(x, y1);
-      ctx.lineTo(x, y1 + 5);
-      ctx.stroke();
-      const label = fmtTime(v);
-      const lines = String(label).split("\n");
-      const yy = y1 + 7;
-      lines.forEach((line, idx) => ctx.fillText(line, x, yy + idx * 13));
-    }
-
-    // axis titles
-    ctx.fillStyle = "#6b7280";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "bottom";
-    ctx.fillText("Дата и время", (x0 + x1) / 2, H - 6);
-    ctx.save();
-    ctx.translate(16, (y0 + y1) / 2);
-    ctx.rotate(-Math.PI / 2);
-    ctx.textAlign = "center";
-    ctx.textBaseline = "top";
-    ctx.fillText("ОА радона", 0, 0);
-    ctx.restore();
-    ctx.restore();
-  }
-
-  function drawSelection() {
-
-	  if (!state.selecting || !state.rect) return;
-	  const left = Math.min(state.rect.x1, state.rect.x2);
-	  const right = Math.max(state.rect.x1, state.rect.x2);
-	  const top = M.t;
-	  const bottom = canvas.clientHeight - M.b;
-	  ctx.save();
-	  // Полупрозрачный interval highlight
-	  ctx.fillStyle = "rgba(37,99,235,.12)";
-	  ctx.strokeStyle = "rgba(37,99,235,.9)";
-	  ctx.setLineDash([6, 4]);
-	  // Основная область
-	  ctx.fillRect(
-		left,
-		top,
-		right - left,
-		bottom - top
-	  );
-	  // Границы интервала
-	  ctx.beginPath();
-
-	  ctx.moveTo(left, top);
-	  ctx.lineTo(left, bottom);
-	  ctx.moveTo(right, top);
-	  ctx.lineTo(right, bottom);
-	  ctx.stroke();
-	  ctx.restore();
-	}
-
-  function drawFits() {
-  if (!state.fits.length) return;
-
-  const plotX = M.l;
-  const plotY = M.t;
-  const plotW = canvas.clientWidth - M.l - M.r;
-  const plotH = canvas.clientHeight - M.t - M.b;
-
-  ctx.save();
-
-  // Ограничиваем рисование областью графика
-  ctx.beginPath();
-  ctx.rect(plotX, plotY, plotW, plotH);
-  ctx.clip();
-
-  ctx.lineWidth = 2;
-
-  for (const fit of state.fits) {
-    const idxs = [];
-
-    for (let i = fit.start; i < fit.end; i++) {
-      const r = state.rows[i];
-      if (isFinite(r.t) && isFinite(r.y)) idxs.push(i);
-    }
-
-    if (idxs.length < 2) continue;
-
-    ctx.strokeStyle =
-      fit.flag === 1
-        ? "rgba(220,38,38,.75)"
-        : "rgba(37,99,235,.75)";
-
-    ctx.beginPath();
-
-    let started = false;
-
-    for (let k = 0; k < idxs.length; k++) {
-      const i = idxs[k];
-
-      const tHours = (state.rows[i].t - fit.t0) / 3600000.0;
-
-      const y = model(
-        tHours,
-        fit.lambda,
-        fit.phi,
-        fit.C0
-      );
-
-      const xPx = xToPx(state.rows[i].t);
-      const yPx = yToPx(y);
-
-      if (!started) {
-        ctx.moveTo(xPx, yPx);
-        started = true;
-      } else {
-        ctx.lineTo(xPx, yPx);
+      function visibleRangeIndices(x0, x1) {
+        const lo = Math.min(x0, x1), hi = Math.max(x0, x1);
+        const idxs = [];
+        for (let i = 0; i < state.rows.length; i++) {
+          const t = state.rows[i].t;
+          if (t >= lo && t <= hi) idxs.push(i);
+        }
+        return idxs;
       }
-    }
 
-    ctx.stroke();
-  }
+      function drawGridAndAxes() {
+        const W = canvas.clientWidth;
+        const H = canvas.clientHeight;
+        const x0 = M.l, y0 = M.t, x1 = W - M.r, y1 = H - M.b;
 
-  ctx.restore();
-}
+        // frame + grid
+        ctx.save();
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(0, 0, W, H);
 
-  function drawSeries() {
-  if (!state.rows.length) return;
+        ctx.strokeStyle = "#e5e7eb";
+        ctx.lineWidth = 1;
 
-  const plotX = M.l;
-  const plotY = M.t;
-  const plotW = canvas.clientWidth - M.l - M.r;
-  const plotH = canvas.clientHeight - M.t - M.b;
+        let yTicks;
+        if (state.logY) {
+          const minPow = Math.floor(
+            Math.log10(Math.max(state.viewMinY, 1e-12))
+          );
 
-  ctx.save();
+          const maxPow = Math.ceil(
+            Math.log10(Math.max(state.viewMaxY, 1e-12))
+          );
+          yTicks = [];
+          for (let p = minPow; p <= maxPow; p++) {
+            yTicks.push(Math.pow(10, p));
+          }
+        } else {
+          yTicks = niceTicks(
+            state.viewMinY,
+            state.viewMaxY,
+            7
+          );
+        }
+        for (const v of yTicks) {
+          const y = yToPx(v);
+          ctx.beginPath();
+          ctx.moveTo(x0, y);
+          ctx.lineTo(x1, y);
+          ctx.stroke();
+        }
 
-  // Ограничение области построения
-  ctx.beginPath();
-  ctx.rect(plotX, plotY, plotW, plotH);
-  ctx.clip();
+        const xTicks = niceTicks(state.viewMinX, state.viewMaxX, 7);
+        for (const v of xTicks) {
+          const x = xToPx(v);
+          ctx.beginPath();
+          ctx.moveTo(x, y0);
+          ctx.lineTo(x, y1);
+          ctx.stroke();
+        }
 
-  ctx.lineWidth = 1.6;
+        // axes lines
+        ctx.strokeStyle = "#374151";
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(x0, y0);
+        ctx.lineTo(x0, y1);
+        ctx.lineTo(x1, y1);
+        ctx.stroke();
 
-  ctx.beginPath();
+        // ticks + labels
+        ctx.fillStyle = "#111827";
+        ctx.strokeStyle = "#9ca3af";
+        ctx.lineWidth = 1;
+        ctx.font = "12px system-ui, sans-serif";
 
-  let started = false;
+        ctx.textAlign = "right";
+        ctx.textBaseline = "middle";
+        for (const v of yTicks) {
+          const y = yToPx(v);
+          ctx.beginPath();
+          ctx.moveTo(x0 - 5, y);
+          ctx.lineTo(x0, y);
+          ctx.stroke();
+          ctx.fillText(
+            state.logY
+              ? `10^${Math.round(Math.log10(v))}`
+              : formatY(v),
+            x0 - 8,
+            y
+          );
+        }
 
-  for (const r of state.rows) {
-    if (!isFinite(r.t) || !isFinite(r.y)) continue;
+        const fmtTime = chooseTimeFormatter(state.viewMaxX - state.viewMinX);
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        for (const v of xTicks) {
+          const x = xToPx(v);
+          ctx.beginPath();
+          ctx.moveTo(x, y1);
+          ctx.lineTo(x, y1 + 5);
+          ctx.stroke();
+          const label = fmtTime(v);
+          const lines = String(label).split("\n");
+          const yy = y1 + 7;
+          lines.forEach((line, idx) => ctx.fillText(line, x, yy + idx * 13));
+        }
 
-    const x = xToPx(r.t);
-    const y = yToPx(r.y);
+        // axis titles
+        ctx.fillStyle = "#6b7280";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "bottom";
+        ctx.fillText("Дата и время", (x0 + x1) / 2, H - 6);
+        ctx.save();
+        ctx.translate(16, (y0 + y1) / 2);
+        ctx.rotate(-Math.PI / 2);
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        ctx.fillText("ОА радона", 0, 0);
+        ctx.restore();
+        ctx.restore();
+      }
 
-    if (!started) {
-      ctx.moveTo(x, y);
-      started = true;
-    } else {
-      ctx.lineTo(x, y);
-    }
-  }
+      function drawSelection() {
 
-  ctx.strokeStyle = "#1f2937";
-  ctx.stroke();
+        if (!state.selecting || !state.rect) return;
+        const left = Math.min(state.rect.x1, state.rect.x2);
+        const right = Math.max(state.rect.x1, state.rect.x2);
+        const top = M.t;
+        const bottom = canvas.clientHeight - M.b;
+        ctx.save();
+        // Полупрозрачный interval highlight
+        ctx.fillStyle = "rgba(37,99,235,.12)";
+        ctx.strokeStyle = "rgba(37,99,235,.9)";
+        ctx.setLineDash([6, 4]);
+        // Основная область
+        ctx.fillRect(
+          left,
+          top,
+          right - left,
+          bottom - top
+        );
+        // Границы интервала
+        ctx.beginPath();
 
-  // Точки
-  for (let i = 0; i < state.rows.length; i++) {
-    const r = state.rows[i];
+        ctx.moveTo(left, top);
+        ctx.lineTo(left, bottom);
+        ctx.moveTo(right, top);
+        ctx.lineTo(right, bottom);
+        ctx.stroke();
+        ctx.restore();
+      }
 
-    if (!isFinite(r.t) || !isFinite(r.y)) continue;
+      function drawFits() {
+        if (!state.fits.length) return;
 
-    const x = xToPx(r.t);
-    const y = yToPx(r.y);
+        const plotX = M.l;
+        const plotY = M.t;
+        const plotW = canvas.clientWidth - M.l - M.r;
+        const plotH = canvas.clientHeight - M.t - M.b;
 
-    const hovered = i === state.cursorIndex;
+        ctx.save();
 
-    let fill = "#6b7280";
+        // Ограничиваем рисование областью графика
+        ctx.beginPath();
+        ctx.rect(plotX, plotY, plotW, plotH);
+        ctx.clip();
 
-    if (r.flag === 1) fill = "#dc2626";
-    if (r.flag === 0) fill = "#2563eb";
+        ctx.lineWidth = 2;
 
-    const radius = hovered ? 5.5 : 3.8;
+        for (const fit of state.fits) {
+          const idxs = [];
 
-    ctx.beginPath();
-    ctx.arc(x, y, radius, 0, Math.PI * 2);
+          for (let i = fit.start; i < fit.end; i++) {
+            const r = state.rows[i];
+            if (isFinite(r.t) && isFinite(r.y)) idxs.push(i);
+          }
 
-    ctx.fillStyle = fill;
-    ctx.fill();
+          if (idxs.length < 2) continue;
 
-    ctx.lineWidth = hovered ? 2 : 1;
-    ctx.strokeStyle = "#fff";
-    ctx.stroke();
-  }
+          ctx.strokeStyle =
+            fit.flag === 1
+              ? "rgba(220,38,38,.75)"
+              : "rgba(37,99,235,.75)";
 
-  ctx.restore();
-}
+          ctx.beginPath();
 
-  function drawCursor() {
-    if (state.cursorIndex < 0 || state.cursorIndex >= state.rows.length) return;
-    const r = state.rows[state.cursorIndex];
-    if (!isFinite(r.t) || !isFinite(r.y)) return;
-    const x = xToPx(r.t), y = yToPx(r.y);
-    ctx.save();
-    ctx.strokeStyle = "rgba(17,24,39,.35)";
-    ctx.setLineDash([4, 4]);
-    ctx.beginPath();
-    ctx.moveTo(x, M.t);
-    ctx.lineTo(x, canvas.clientHeight - M.b);
-    ctx.moveTo(M.l, y);
-    ctx.lineTo(canvas.clientWidth - M.r, y);
-    ctx.stroke();
-    ctx.restore();
+          let started = false;
 
-    ctx.save();
-    
-const tooltipLines = [
-      `X: ${formatDateTime(r.t)}`,
-      `Y: ${r.y.toFixed(4)}`
-    ];
+          for (let k = 0; k < idxs.length; k++) {
+            const i = idxs[k];
 
-    if (r.fit) {
-      tooltipLines.push(`C0: ${r.fit.C0.toFixed(4)}`);
-      tooltipLines.push(`Phi: ${r.fit.phi.toFixed(6)}`);
-      tooltipLines.push(`Lambda: ${r.fit.lambda.toFixed(10)}`);
-    }
+            const tHours = (state.rows[i].t - fit.t0) / 3600000.0;
 
-    const label = tooltipLines;
+            const y = model(
+              tHours,
+              fit.lambda,
+              fit.phi,
+              fit.C0
+            );
 
-    const padX = 8, padY = 6;
-    ctx.font = "12px system-ui, sans-serif";
-    const lineWidths = label.map(line => ctx.measureText(line).width);
-    const boxW = Math.max(...lineWidths) + padX * 2;
-    const boxH = label.length * 18 + padY * 2;
-    const topPadding = 8;
+            const xPx = xToPx(state.rows[i].t);
+            const yPx = yToPx(y);
 
-	let bx = x - boxW / 2;
+            if (!started) {
+              ctx.moveTo(xPx, yPx);
+              started = true;
+            } else {
+              ctx.lineTo(xPx, yPx);
+            }
+          }
 
-	// Ограничиваем tooltip внутри plotting area
-	bx = Math.max(M.l + 4, bx);
-	bx = Math.min(
-	  canvas.clientWidth - M.r - boxW - 4,
-	  bx
-	);
+          ctx.stroke();
+        }
 
-	// Фиксированная позиция сверху
-	const by = M.t + topPadding;
-	
-    ctx.fillStyle = "rgba(17,24,39,.82)";
-    ctx.strokeStyle = "rgba(255,255,255,.15)";
-    roundRect(ctx, bx, by, boxW, boxH, 8);
-    ctx.fill();
-    ctx.stroke();
-    ctx.fillStyle = "#ffffff";
-    ctx.textAlign = "left";
-    ctx.textBaseline = "top";
+        ctx.restore();
+      }
 
-    label.forEach((line, idx) => {
-      ctx.fillText(line, bx + padX, by + padY + idx * 18);
-    });
-    ctx.restore();
-  }
+      function drawSeries() {
+        if (!state.rows.length) return;
 
-  function roundRect(ctx, x, y, w, h, r) {
-    const rr = Math.min(r, w / 2, h / 2);
-    ctx.beginPath();
-    ctx.moveTo(x + rr, y);
-    ctx.arcTo(x + w, y, x + w, y + h, rr);
-    ctx.arcTo(x + w, y + h, x, y + h, rr);
-    ctx.arcTo(x, y + h, x, y, rr);
-    ctx.arcTo(x, y, x + w, y, rr);
-    ctx.closePath();
-  }
+        const plotX = M.l;
+        const plotY = M.t;
+        const plotW = canvas.clientWidth - M.l - M.r;
+        const plotH = canvas.clientHeight - M.t - M.b;
 
-  function render() {
-    if (!state.rows.length) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      drawEmptyState();
-      return;
-    }
-    resizeCanvas();
-    drawGridAndAxes();
-    drawSelection();
-    drawFits();
-    drawSeries();
-    drawCursor();
-  }
+        ctx.save();
 
-  function drawEmptyState() {
-    const W = canvas.clientWidth, H = canvas.clientHeight;
-    ctx.save();
-    ctx.fillStyle = "#fff";
-    ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = "#6b7280";
-    ctx.font = "16px system-ui, sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText("Загрузите временную серию, чтобы увидеть график", W / 2, H / 2 - 10);
-    ctx.font = "13px system-ui, sans-serif";
-    ctx.fillText("Формат: datetime<TAB>radon [<TAB>flag]", W / 2, H / 2 + 14);
-    ctx.restore();
-  }
+        // Ограничение области построения
+        ctx.beginPath();
+        ctx.rect(plotX, plotY, plotW, plotH);
+        ctx.clip();
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
 
-  function resizeCanvas() {
-    const ratio = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-    canvas.width = Math.max(2, Math.round(rect.width * ratio));
-    canvas.height = Math.max(2, Math.round(rect.height * ratio));
-    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-  }
+        let started = false;
 
-  function updateSummary() {
-    const n = state.rows.length;
-    const f1 = state.rows.filter(r => r.flag === 1).length;
-    const f0 = state.rows.filter(r => r.flag === 0).length;
-    const none = n - f1 - f0;
-    const segs = state.fits.length;
-    const parts = [`Участков накопления: ${f1}`, `Участков разбавления: ${f0}`, `Не выбрано: ${none}`, `Сегментов для подгонки: ${segs}`];
-    fitText.textContent = `${parts.join("\n")}`;
-  }
+        for (const r of state.rows) {
+          if (!isFinite(r.t) || !isFinite(r.y)) continue;
 
-  function setCursorInfo() {
-    if (state.cursorIndex < 0 || state.cursorIndex >= state.rows.length) {
-      cursorText.textContent = "Курсор: -";
-      return;
-    }
-    const r = state.rows[state.cursorIndex];
-    const fitExtra = r.fit
-      ? ` | C0=${r.fit.C0.toFixed(4)} | Phi=${r.fit.phi.toFixed(6)} | Lambda=${r.fit.lambda.toFixed(10)}`
-      : "";
-    cursorText.textContent = `Курсор: ${formatDateTime(r.t)} | y=${r.y.toFixed(4)} | Флаг=${r.flag == null ? "-" : r.flag}${fitExtra}`;
-  }
+          const x = xToPx(r.t);
+          const y = yToPx(r.y);
 
-  function setSelectionInfo(text) {
-    selectionText.textContent = `Выделение: ${text}`;
-  }
+          if (!started) {
+            ctx.moveTo(x, y);
+            started = true;
+          } else {
+            ctx.lineTo(x, y);
+          }
+        }
 
-  function exportData(delim, ext) {
-    const text = buildExportText(delim);
-    const blob = new Blob([text], { type: ext === "csv" ? "text/csv;charset=utf-8" : "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `radon_flags.${ext}`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  }
+        ctx.strokeStyle = "#1f2937";
+        ctx.stroke();
 
-  function buildExportText(delim) {
-    const header = [`datetime`, `radon`, `flag`, `C0`, `phi`, `lambda`].join(delim);
-    const lines = [header];
-    for (const r of state.rows) {
-      lines.push([
-        formatDateTime(r.t),
-        String(r.y),
-        String(r.flag == null ? "" : r.flag),
-        r.fit ? r.fit.C0 : "",
-        r.fit ? r.fit.phi : "",
-        r.fit ? r.fit.lambda : ""
-      ].join(delim));
-    }
-    return lines.join("\n");
-  }
+        // Точки
+        for (let i = 0; i < state.rows.length; i++) {
+          const r = state.rows[i];
 
-  
-  function updatePreviewTable() {
-    if (!previewTableBody) return;
-    previewTableBody.innerHTML = "";
+          if (!isFinite(r.t) || !isFinite(r.y)) continue;
 
-    for (const r of state.rows.slice(0, 500)) {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
+          const x = xToPx(r.t);
+          const y = yToPx(r.y);
+          const hovered = i === state.cursorIndex;
+
+          let fill = "#6b7280";
+
+          if (r.flag === 1) fill = "#dc2626";
+          if (r.flag === 0) fill = "#2563eb";
+
+          const radius = hovered ? 5.5 : 3.8;
+
+          ctx.beginPath();
+          ctx.arc(x, y, radius, 0, Math.PI * 2);
+
+          ctx.fillStyle = fill;
+          ctx.fill();
+
+          ctx.lineWidth = hovered ? 2 : 1;
+          ctx.strokeStyle = "#fff";
+          ctx.stroke();
+        }
+
+        ctx.restore();
+      }
+
+      function drawCursor() {
+        if (state.cursorIndex < 0 || state.cursorIndex >= state.rows.length) return;
+        const r = state.rows[state.cursorIndex];
+        if (!isFinite(r.t) || !isFinite(r.y)) return;
+        const x = xToPx(r.t), y = yToPx(r.y);
+        ctx.save();
+        ctx.strokeStyle = "rgba(17,24,39,.35)";
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(x, M.t);
+        ctx.lineTo(x, canvas.clientHeight - M.b);
+        ctx.moveTo(M.l, y);
+        ctx.lineTo(canvas.clientWidth - M.r, y);
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.save();
+
+        const tooltipLines = [
+          `X: ${formatDateTime(r.t)}`,
+          `Y: ${r.y.toFixed(4)}`
+        ];
+
+        if (r.fit) {
+          tooltipLines.push(`C0: ${r.fit.C0.toFixed(4)}`);
+          tooltipLines.push(`Phi: ${r.fit.phi.toFixed(6)}`);
+          tooltipLines.push(`Lambda: ${r.fit.lambda.toFixed(10)}`);
+        }
+
+        const label = tooltipLines;
+
+        const padX = 8, padY = 6;
+        ctx.font = "12px system-ui, sans-serif";
+        const lineWidths = label.map(line => ctx.measureText(line).width);
+        const boxW = Math.max(...lineWidths) + padX * 2;
+        const boxH = label.length * 18 + padY * 2;
+        const topPadding = 8;
+
+        let bx = x - boxW / 2;
+
+        // Ограничиваем tooltip внутри plotting area
+        bx = Math.max(M.l + 4, bx);
+        bx = Math.min(
+          canvas.clientWidth - M.r - boxW - 4,
+          bx
+        );
+
+        // Фиксированная позиция сверху
+        const by = M.t + topPadding;
+
+        ctx.fillStyle = "rgba(17,24,39,.82)";
+        ctx.strokeStyle = "rgba(255,255,255,.15)";
+        roundRect(ctx, bx, by, boxW, boxH, 8);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#ffffff";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "top";
+
+        label.forEach((line, idx) => {
+          ctx.fillText(line, bx + padX, by + padY + idx * 18);
+        });
+        ctx.restore();
+      }
+
+      function roundRect(ctx, x, y, w, h, r) {
+        const rr = Math.min(r, w / 2, h / 2);
+        ctx.beginPath();
+        ctx.moveTo(x + rr, y);
+        ctx.arcTo(x + w, y, x + w, y + h, rr);
+        ctx.arcTo(x + w, y + h, x, y + h, rr);
+        ctx.arcTo(x, y + h, x, y, rr);
+        ctx.arcTo(x, y, x + w, y, rr);
+        ctx.closePath();
+      }
+
+      function render() {
+        if (!state.rows.length) {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          drawEmptyState();
+          return;
+        }
+        resizeCanvas();
+        drawGridAndAxes();
+        drawSelection();
+        drawFits();
+        drawSeries();
+        drawCursor();
+      }
+
+      function drawEmptyState() {
+        const W = canvas.clientWidth, H = canvas.clientHeight;
+        ctx.save();
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = "#6b7280";
+        ctx.font = "16px system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("Загрузите временную серию, чтобы увидеть график", W / 2, H / 2 - 10);
+        ctx.font = "13px system-ui, sans-serif";
+        ctx.fillText("Формат: datetime<TAB>radon [<TAB>flag]", W / 2, H / 2 + 14);
+        ctx.restore();
+      }
+
+      function resizeCanvas() {
+        const ratio = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = Math.max(2, Math.round(rect.width * ratio));
+        canvas.height = Math.max(2, Math.round(rect.height * ratio));
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      }
+
+      function updateSummary() {
+        const n = state.rows.length;
+        const f1 = state.rows.filter(r => r.flag === 1).length;
+        const f0 = state.rows.filter(r => r.flag === 0).length;
+        const none = n - f1 - f0;
+        const segs = state.fits.length;
+        const parts = [`Участков накопления: ${f1}`, `Участков разбавления: ${f0}`, `Не выбрано: ${none}`, `Сегментов для подгонки: ${segs}`];
+        fitText.textContent = `${parts.join("\n")}`;
+      }
+
+      function setCursorInfo() {
+        if (state.cursorIndex < 0 || state.cursorIndex >= state.rows.length) {
+          cursorText.textContent = "Курсор: -";
+          return;
+        }
+        const r = state.rows[state.cursorIndex];
+        const fitExtra = r.fit
+          ? ` | C0=${r.fit.C0.toFixed(4)} | Phi=${r.fit.phi.toFixed(6)} | Lambda=${r.fit.lambda.toFixed(10)}`
+          : "";
+        cursorText.textContent = `Курсор: ${formatDateTime(r.t)} | y=${r.y.toFixed(4)} | Флаг=${r.flag == null ? "-" : r.flag}${fitExtra}`;
+      }
+
+      function setSelectionInfo(text) {
+        selectionText.textContent = `Выделение: ${text}`;
+      }
+
+      function exportData(delim, ext) {
+        const text = buildExportText(delim);
+        const blob = new Blob([text], { type: ext === "csv" ? "text/csv;charset=utf-8" : "text/plain;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `radon_flags.${ext}`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      function buildExportText(delim) {
+        const header = [`datetime`, `radon`, `flag`, `C0`, `phi`, `lambda`].join(delim);
+        const lines = [header];
+        for (const r of state.rows) {
+          lines.push([
+            formatDateTime(r.t),
+            String(r.y),
+            String(r.flag == null ? "" : r.flag),
+            r.fit ? r.fit.C0 : "",
+            r.fit ? r.fit.phi : "",
+            r.fit ? r.fit.lambda : ""
+          ].join(delim));
+        }
+        return lines.join("\n");
+      }
+
+
+      function updatePreviewTable() {
+        if (!previewTableBody) return;
+        previewTableBody.innerHTML = "";
+
+        for (const r of state.rows.slice(0, 500)) {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
         <td style="padding:6px;border-bottom:1px solid #eee;">${formatDateTime(r.t)}</td>
         <td style="padding:6px;border-bottom:1px solid #eee;">${r.y}</td>
         <td style="padding:6px;border-bottom:1px solid #eee;">${r.flag == null ? "" : r.flag}</td>
@@ -1246,379 +1382,329 @@ const tooltipLines = [
         <td style="padding:6px;border-bottom:1px solid #eee;">${r.fit ? r.fit.phi.toFixed(1) : ""}</td>
         <td style="padding:6px;border-bottom:1px solid #eee;">${r.fit ? r.fit.lambda.toExponential(3) : ""}</td>
       `;
-      previewTableBody.appendChild(tr);
-    }
-  }
-
-
-  // Mouse / pointer interactions
-  function canvasPos(ev) {
-    const rect = canvas.getBoundingClientRect();
-    return { x: ev.clientX - rect.left, y: ev.clientY - rect.top };
-  }
-
-  canvas.addEventListener("pointerdown", ev => {
-    if (!state.rows.length) return;
-    canvas.setPointerCapture(ev.pointerId);
-    const p = canvasPos(ev);
-    state.dragging = true;
-    state.dragStart = p;
-    state.lastPt = p;
-
-    if (ev.ctrlKey) {
-      state.selecting = true;
-      state.panning = false;
-      state.rect = {
-        x1: p.x,
-        x2: p.x
-      };
-      setSelectionInfo("идёт выделение интервала");
-    } else {
-      state.panning = true;
-      state.selecting = false;
-      state.rect = null;
-      setSelectionInfo("нет");
-    }
-  });
-
-  canvas.addEventListener("pointermove", ev => {
-    const p = canvasPos(ev);
-    state.mouseX = p.x; state.mouseY = p.y;
-    if (state.rows.length) {
-      state.cursorIndex = nearestPoint(p.x, p.y).idx;
-      setCursorInfo();
-    }
-
-    if (!state.dragging) {
-      render();
-      return;
-    }
-
-    if (state.selecting) {
-      state.rect.x2 = p.x;
-      const x0 = pxToX(state.rect.x1), x1 = pxToX(state.rect.x2);
-      const idxs = visibleRangeIndices(x0, x1);
-      setSelectionInfo(`X от ${formatDateTime(Math.min(x0, x1))} до ${formatDateTime(Math.max(x0, x1))} · точек: ${idxs.length}`);
-      render();
-      return;
-    }
-
-    if (state.panning) {
-
-	  // =====================================================
-	  // PAN X
-	  // =====================================================
-
-	  const dx = p.x - state.lastPt.x;
-
-	  const scaleX =
-		(state.viewMaxX - state.viewMinX) /
-		Math.max(1, canvas.clientWidth - M.l - M.r);
-
-	  const shiftX = dx * scaleX;
-
-	  state.viewMinX -= shiftX;
-	  state.viewMaxX -= shiftX;
-
-	  const fullRangeX =
-		state.dataMaxX - state.dataMinX;
-
-	  const currentRangeX =
-		state.viewMaxX - state.viewMinX;
-
-	  if (
-		state.viewMinX <
-		state.dataMinX - fullRangeX * 0.05
-	  ) {
-		state.viewMinX =
-		  state.dataMinX - fullRangeX * 0.05;
-
-		state.viewMaxX =
-		  state.viewMinX + currentRangeX;
-	  }
-
-	  if (
-		state.viewMaxX >
-		state.dataMaxX + fullRangeX * 0.05
-	  ) {
-		state.viewMaxX =
-		  state.dataMaxX + fullRangeX * 0.05;
-
-		state.viewMinX =
-		  state.viewMaxX - currentRangeX;
-	  }
-
-	  // =====================================================
-	  // PAN Y
-	  // =====================================================
-
-	  const dy = p.y - state.lastPt.y;
-
-	// =====================================================
-	// LOG / LINEAR aware PAN Y
-	// =====================================================
-
-	const h =
-	  Math.max(
-		1,
-		canvas.clientHeight - M.t - M.b
-	  );
-
-	const minTY = transformY(state.viewMinY);
-	const maxTY = transformY(state.viewMaxY);
-
-	const rangeTY = maxTY - minTY;
-
-	// Смещение в transform-space
-	const shiftTY = (dy / h) * rangeTY;
-
-	// PAN без изменения zoom
-	const newMinTY = minTY + shiftTY;
-	const newMaxTY = maxTY + shiftTY;
-
-	state.viewMinY = inverseTransformY(newMinTY);
-	state.viewMaxY = inverseTransformY(newMaxTY);
-
-	  const fullRangeY =
-		state.dataMaxY - state.dataMinY || 1;
-
-	  const currentRangeY =
-		state.viewMaxY - state.viewMinY;
-
-	  // Ограничения по Y
-	  if (
-		state.viewMinY <
-		state.dataMinY - fullRangeY * 2
-	  ) {
-		state.viewMinY =
-		  state.dataMinY - fullRangeY * 2;
-
-		state.viewMaxY =
-		  state.viewMinY + currentRangeY;
-	  }
-
-	  if (
-		state.viewMaxY >
-		state.dataMaxY + fullRangeY * 2
-	  ) {
-		state.viewMaxY =
-		  state.dataMaxY + fullRangeY * 2;
-
-		state.viewMinY =
-		  state.viewMaxY - currentRangeY;
-	  }
-
-	  state.lastPt = p;
-
-	  render();
-	}
-  });
-
-  canvas.addEventListener("pointerup", ev => {
-	  if (!state.dragging) return;
-
-	  const p = canvasPos(ev);
-	  const didSelect = state.selecting && state.rect;
-
-	  state.dragging = false;
-	  state.panning = false;
-
-	  // Ctrl + ПКМ -> сброс флага
-	  const resetMode = ev.ctrlKey && ev.button === 2;
-
-	  if (didSelect) {
-		const x0 = pxToX(state.rect.x1);
-		const x1 = pxToX(state.rect.x2);
-
-		const idxs = visibleRangeIndices(x0, x1);
-
-		if (idxs.length) {
-		  applyFlagToIndices(
-			idxs,
-			resetMode ? null : state.activeFlag
-		  );
-
-		  setSelectionInfo(
-			resetMode
-			  ? `сброшены флаги у точек: ${idxs.length}`
-			  : `применён флаг ${state.activeFlag == null ? "—" : state.activeFlag} к точкам: ${idxs.length}`
-		  );
-		} else {
-		  setSelectionInfo("пусто");
-		}
-
-		state.rect = null;
-		render();
-		return;
-	  }
-
-	  // Одиночная точка
-	  const moved = Math.hypot(
-		(p.x - state.dragStart.x),
-		(p.y - state.dragStart.y)
-	  );
-
-	  if (ev.ctrlKey && moved < 6) {
-		const near = nearestPoint(p.x, p.y);
-
-		if (
-		  near.idx >= 0 &&
-		  near.dist2 <= PX_THRESH * PX_THRESH
-		) {
-		  applyFlagToIndices(
-			[near.idx],
-			resetMode ? null : state.activeFlag
-		  );
-
-		  setSelectionInfo(
-			resetMode
-			  ? `флаг точки ${near.idx + 1} сброшен`
-			  : `точка ${near.idx + 1} помечена как ${state.activeFlag == null ? "—" : state.activeFlag}`
-		  );
-		} else {
-		  setSelectionInfo(
-			"точка не найдена рядом с курсором"
-		  );
-		}
-	  }
-
-	  state.rect = null;
-	  render();
-	});
-
-  canvas.addEventListener("contextmenu", ev => {
-	  ev.preventDefault();
-	});
-
-  canvas.addEventListener("pointerleave", () => {
-    state.cursorIndex = -1;
-    setCursorInfo();
-    if (!state.dragging) render();
-  });
-
-  canvas.addEventListener("wheel", ev => {
-	  if (!state.rows.length) return;
-
-	  ev.preventDefault();
-
-	  const p = canvasPos(ev);
-
-	  // zoom in/out
-	  const factor = ev.deltaY < 0 ? 0.9 : 1.1;
-
-	  // =====================================================
-	  // SHIFT + WHEEL -> масштаб по Y
-	  // =====================================================
-	  if (ev.shiftKey) {
-
-		const yAtCursor = pxToY(p.y);
-
-		const rangeY = state.viewMaxY - state.viewMinY;
-
-		let newRangeY = rangeY * factor;
-
-		const fullRangeY = state.dataMaxY - state.dataMinY || 1;
-
-		const minRangeY = Math.max(1e-6, fullRangeY * 0.0005);
-		const maxRangeY = fullRangeY * 50;
-
-		newRangeY = Math.max(
-		  minRangeY,
-		  Math.min(maxRangeY, newRangeY)
-		);
-
-		const topFrac =
-		  (state.viewMaxY - yAtCursor) / rangeY;
-
-		state.viewMaxY =
-		  yAtCursor + topFrac * newRangeY;
-
-		state.viewMinY =
-		  state.viewMaxY - newRangeY;
-
-		render();
-		return;
-	  }
-
-	  // =====================================================
-	  // Обычный zoom по X
-	  // =====================================================
-
-	  const xAtCursor = pxToX(p.x);
-
-	  const rangeX = state.viewMaxX - state.viewMinX;
-
-	  let newRangeX = rangeX * factor;
-
-	  const fullRangeX = state.dataMaxX - state.dataMinX || 1;
-
-	  const minRangeX = Math.max(
-		60000,
-		fullRangeX * 0.0005
-	  );
-
-	  const maxRangeX = fullRangeX * 50;
-
-	  newRangeX = Math.max(
-		minRangeX,
-		Math.min(maxRangeX, newRangeX)
-	  );
-
-	  const leftFrac =
-		(xAtCursor - state.viewMinX) / rangeX;
-
-	  state.viewMinX =
-		xAtCursor - leftFrac * newRangeX;
-
-	  state.viewMaxX =
-		state.viewMinX + newRangeX;
-
-	  // Ограничение pan/zoom по X
-	  if (
-		state.viewMinX <
-		state.dataMinX - fullRangeX * 0.05
-	  ) {
-		state.viewMinX =
-		  state.dataMinX - fullRangeX * 0.05;
-
-		state.viewMaxX =
-		  state.viewMinX + newRangeX;
-	  }
-
-	  if (
-		state.viewMaxX >
-		state.dataMaxX + fullRangeX * 0.05
-	  ) {
-		state.viewMaxX =
-		  state.dataMaxX + fullRangeX * 0.05;
-
-		state.viewMinX =
-		  state.viewMaxX - newRangeX;
-	  }
-
-	  render();
-
-	}, { passive: false });
-
-  document.addEventListener("keydown", ev => {
-    // no-op; Ctrl is handled by pointer state directly
-    if (ev.key === "Escape") {
-      state.selecting = false;
-      state.rect = null;
-      setSelectionInfo("сброшено");
-      render();
-    }
-  });
-
-  window.addEventListener("resize", () => render());
-
-  // Initial empty render.
-  resizeCanvas();
-  drawEmptyState();
-  updateSummary();
-  setSelectionInfo("—");
-
-})();
-</script>
+          previewTableBody.appendChild(tr);
+        }
+      }
+
+
+      // Mouse / pointer interactions
+      function canvasPos(ev) {
+        const rect = canvas.getBoundingClientRect();
+        return { x: ev.clientX - rect.left, y: ev.clientY - rect.top };
+      }
+
+      canvas.addEventListener("pointerdown", ev => {
+        if (!state.rows.length) return;
+        canvas.setPointerCapture(ev.pointerId);
+        const p = canvasPos(ev);
+        state.dragging = true;
+        state.dragStart = p;
+        state.lastPt = p;
+
+        if (ev.ctrlKey) {
+          state.selecting = true;
+          state.panning = false;
+          state.rect = {
+            x1: p.x,
+            x2: p.x
+          };
+          setSelectionInfo("идёт выделение интервала");
+        } else {
+          state.panning = true;
+          state.selecting = false;
+          state.rect = null;
+          setSelectionInfo("нет");
+        }
+      });
+
+      canvas.addEventListener("pointermove", ev => {
+        const p = canvasPos(ev);
+        state.mouseX = p.x; state.mouseY = p.y;
+        if (state.rows.length) {
+          state.cursorIndex = nearestPoint(p.x, p.y).idx;
+          setCursorInfo();
+        }
+
+        if (!state.dragging) {
+          render();
+          return;
+        }
+
+        if (state.selecting) {
+          state.rect.x2 = p.x;
+          const x0 = pxToX(state.rect.x1), x1 = pxToX(state.rect.x2);
+          const idxs = visibleRangeIndices(x0, x1);
+          setSelectionInfo(`X от ${formatDateTime(Math.min(x0, x1))} до ${formatDateTime(Math.max(x0, x1))} · точек: ${idxs.length}`);
+          render();
+          return;
+        }
+
+        if (state.panning) {
+          // =====================================================
+          // PAN X
+          // =====================================================
+          const dx = p.x - state.lastPt.x;
+          const scaleX =
+            (state.viewMaxX - state.viewMinX) /
+            Math.max(1, canvas.clientWidth - M.l - M.r);
+
+          const shiftX = dx * scaleX;
+
+          state.viewMinX -= shiftX;
+          state.viewMaxX -= shiftX;
+
+          const fullRangeX =
+            state.dataMaxX - state.dataMinX;
+
+          const currentRangeX =
+            state.viewMaxX - state.viewMinX;
+
+          if (state.viewMinX < state.dataMinX - fullRangeX * 0.05) {
+            state.viewMinX = state.dataMinX - fullRangeX * 0.05;
+            state.viewMaxX = state.viewMinX + currentRangeX;
+          }
+
+          if (state.viewMaxX > state.dataMaxX + fullRangeX * 0.05) {
+            state.viewMaxX = state.dataMaxX + fullRangeX * 0.05;
+            state.viewMinX = state.viewMaxX - currentRangeX;
+          }
+
+          // =====================================================
+          // PAN Y
+          // =====================================================
+          const dy = p.y - state.lastPt.y;
+
+          // =====================================================
+          // LOG / LINEAR aware PAN Y
+          // =====================================================
+
+          const h = Math.max(1, canvas.clientHeight - M.t - M.b);
+          const minTY = transformY(state.viewMinY);
+          const maxTY = transformY(state.viewMaxY);
+          const rangeTY = maxTY - minTY;
+
+          // Смещение в transform-space
+          const shiftTY = (dy / h) * rangeTY;
+
+          // PAN без изменения zoom
+          const newMinTY = minTY + shiftTY;
+          const newMaxTY = maxTY + shiftTY;
+
+          state.viewMinY = inverseTransformY(newMinTY);
+          state.viewMaxY = inverseTransformY(newMaxTY);
+
+          const fullRangeY = state.dataMaxY - state.dataMinY || 1;
+
+          const currentRangeY = state.viewMaxY - state.viewMinY;
+
+          // Ограничения по Y
+          if (
+            state.viewMinY <
+            state.dataMinY - fullRangeY * 2
+          ) {
+            state.viewMinY =
+              state.dataMinY - fullRangeY * 2;
+
+            state.viewMaxY =
+              state.viewMinY + currentRangeY;
+          }
+
+          if (
+            state.viewMaxY >
+            state.dataMaxY + fullRangeY * 2
+          ) {
+            state.viewMaxY =
+              state.dataMaxY + fullRangeY * 2;
+
+            state.viewMinY =
+              state.viewMaxY - currentRangeY;
+          }
+
+          state.lastPt = p;
+
+          render();
+        }
+      });
+
+      canvas.addEventListener("pointerup", ev => {
+        if (!state.dragging) return;
+
+        const p = canvasPos(ev);
+        const didSelect = state.selecting && state.rect;
+
+        state.dragging = false;
+        state.panning = false;
+
+        // Ctrl + ПКМ -> сброс флага
+        const resetMode = ev.ctrlKey && ev.button === 2;
+
+        if (didSelect) {
+          const x0 = pxToX(state.rect.x1);
+          const x1 = pxToX(state.rect.x2);
+          const idxs = visibleRangeIndices(x0, x1);
+
+          if (idxs.length) {
+            applyFlagToIndices(
+              idxs,
+              resetMode ? null : state.activeFlag
+            );
+
+            setSelectionInfo(
+              resetMode
+                ? `сброшены флаги у точек: ${idxs.length}`
+                : `применён флаг ${state.activeFlag == null ? "—" : state.activeFlag} к точкам: ${idxs.length}`
+            );
+          } else {
+            setSelectionInfo("пусто");
+          }
+
+          state.rect = null;
+          render();
+          return;
+        }
+
+        // Одиночная точка
+        const moved = Math.hypot(
+          (p.x - state.dragStart.x),
+          (p.y - state.dragStart.y)
+        );
+
+        if (ev.ctrlKey && moved < 6) {
+          const near = nearestPoint(p.x, p.y);
+
+          if (
+            near.idx >= 0 &&
+            near.dist2 <= PX_THRESH * PX_THRESH
+          ) {
+            applyFlagToIndices(
+              [near.idx],
+              resetMode ? null : state.activeFlag
+            );
+
+            setSelectionInfo(
+              resetMode
+                ? `флаг точки ${near.idx + 1} сброшен`
+                : `точка ${near.idx + 1} помечена как ${state.activeFlag == null ? "—" : state.activeFlag}`
+            );
+          } else {
+            setSelectionInfo(
+              "точка не найдена рядом с курсором"
+            );
+          }
+        }
+
+        state.rect = null;
+        render();
+      });
+
+      canvas.addEventListener("contextmenu", ev => {
+        ev.preventDefault();
+      });
+
+      canvas.addEventListener("pointerleave", () => {
+        state.cursorIndex = -1;
+        setCursorInfo();
+        if (!state.dragging) render();
+      });
+
+      canvas.addEventListener("wheel", ev => {
+        if (!state.rows.length) return;
+        ev.preventDefault();
+        const p = canvasPos(ev);
+        // zoom in/out
+        const factor = ev.deltaY < 0 ? 0.9 : 1.1;
+
+        // =====================================================
+        // SHIFT + WHEEL -> масштаб по Y
+        // =====================================================
+        if (ev.shiftKey) {
+          const yAtCursor = pxToY(p.y);
+          const rangeY = state.viewMaxY - state.viewMinY;
+          let newRangeY = rangeY * factor;
+          const fullRangeY = state.dataMaxY - state.dataMinY || 1;
+          const minRangeY = Math.max(1e-6, fullRangeY * 0.0005);
+          const maxRangeY = fullRangeY * 50;
+
+          newRangeY = Math.max(
+            minRangeY,
+            Math.min(maxRangeY, newRangeY)
+          );
+
+          const topFrac =
+            (state.viewMaxY - yAtCursor) / rangeY;
+
+          state.viewMaxY =
+            yAtCursor + topFrac * newRangeY;
+
+          state.viewMinY =
+            state.viewMaxY - newRangeY;
+
+          render();
+          return;
+        }
+
+        // =====================================================
+        // Обычный zoom по X
+        // =====================================================
+
+        const xAtCursor = pxToX(p.x);
+        const rangeX = state.viewMaxX - state.viewMinX;
+        let newRangeX = rangeX * factor;
+        const fullRangeX = state.dataMaxX - state.dataMinX || 1;
+        const minRangeX = Math.max(60000, fullRangeX * 0.0005);
+        const maxRangeX = fullRangeX * 50;
+        newRangeX = Math.max(minRangeX, Math.min(maxRangeX, newRangeX));
+        const leftFrac = (xAtCursor - state.viewMinX) / rangeX;
+        state.viewMinX = xAtCursor - leftFrac * newRangeX;
+        state.viewMaxX = state.viewMinX + newRangeX;
+
+        // Ограничение pan/zoom по X
+        if (
+          state.viewMinX <
+          state.dataMinX - fullRangeX * 0.05
+        ) {
+          state.viewMinX =
+            state.dataMinX - fullRangeX * 0.05;
+
+          state.viewMaxX =
+            state.viewMinX + newRangeX;
+        }
+
+        if (
+          state.viewMaxX >
+          state.dataMaxX + fullRangeX * 0.05
+        ) {
+          state.viewMaxX =
+            state.dataMaxX + fullRangeX * 0.05;
+
+          state.viewMinX =
+            state.viewMaxX - newRangeX;
+        }
+
+        render();
+
+      }, { passive: false });
+
+      document.addEventListener("keydown", ev => {
+        // no-op; Ctrl is handled by pointer state directly
+        if (ev.key === "Escape") {
+          state.selecting = false;
+          state.rect = null;
+          setSelectionInfo("сброшено");
+          render();
+        }
+      });
+
+      window.addEventListener("resize", () => render());
+
+      // Initial empty render.
+      resizeCanvas();
+      drawEmptyState();
+      updateSummary();
+      setSelectionInfo("-");
+
+    })();
+  </script>
 </body>
+
 </html>
