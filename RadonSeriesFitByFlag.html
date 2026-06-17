@@ -364,10 +364,10 @@
           <table id="previewTable" style="width:100%; border-collapse:collapse; font-size:12px; text-align:center;">
             <thead style="position:sticky; top:0; background:#f9fafb;">
               <tr>
-                <th style="padding:6px; border-bottom:1px solid var(--border);">ID</th>
+                <th style="padding:6px; border-bottom:1px solid var(--border);">№ участка</th>
                 <th style="padding:6px; border-bottom:1px solid var(--border);">Дата и время</th>
                 <th style="padding:6px; border-bottom:1px solid var(--border);">ОА радона</th>
-                <th style="padding:6px; border-bottom:1px solid var(--border);">Флаг</th>
+                <th style="padding:6px; border-bottom:1px solid var(--border);">Флаг разбавления</th>
                 <th style="padding:6px; border-bottom:1px solid var(--border);">C0</th>
                 <th style="padding:6px; border-bottom:1px solid var(--border);">Phi</th>
                 <th style="padding:6px; border-bottom:1px solid var(--border);">Lambda</th>
@@ -460,7 +460,7 @@
           if (!rows.length) return alert("Не удалось прочитать таблицу из буфера.");
           loadRows(rows);
         } catch (err) {
-          alert("Не удалось прочитать буфер обмена. Вставьте текст вручную в textarea.");
+          alert("Не удалось прочитать буфер обмена. Вставьте текст вручную в textarea." + err);
         }
       });
 
@@ -566,18 +566,39 @@
           const parts = splitLine(line, delim);
           if (parts.length < 2) continue;
 
-          // Try to use the last column as flag when present.
+          // Try to use the third column as flag when present.
           let maybeFlag = null;
           let flagCol = null;
-          if (parts.length > 2){
+          if (parts.length >= 3){
             const flagColText = parts[2];
             if (flagColText === "0" || flagColText === "1") {
               maybeFlag = Number(flagColText);
               flagCol = 2;
             }
           }
-          
 
+          let tempOut = null;
+          let tempOutCol = null;
+          if (parts.length >= 4){
+            const tempOutText = parts[3];
+            const tempOutParsed = parseFloat(tempOutText);
+            if (Number.isFinite(tempOutParsed)){
+              tempOut = tempOutParsed;
+              tempOutCol = 3;
+            }
+          }
+
+          let tempIn = null;
+          let tempInCol = null;
+          if (parts.length >= 5){
+            const tempInText = parts[4];
+            const tempInParsed = parseFloat(tempInText);
+            if (Number.isFinite(tempInParsed)){
+              tempIn = tempInText;
+              tempInCol = 4;
+            }
+          }
+        
           // Heuristics:
           // 1) datetime in first cell, value in second/third cell.
           // 2) datetime split into date + time in first two cells.
@@ -606,7 +627,7 @@
             t = dt; y = val;
           }
 
-          rows.push({ t, y, flag: maybeFlag });
+          rows.push({ t, y, flag: maybeFlag, tempOut: tempOut, tempIn: tempIn});
         }
 
         // Sort by time if needed.
@@ -620,6 +641,8 @@
           t: r.t,
           y: r.y,
           flag: r.flag === 0 || r.flag === 1 ? r.flag : null,
+          tempOut: r.tempOut,
+          tempIn: r.tempIn,
           fit: null,
         }));
         resetView();
@@ -1233,12 +1256,18 @@
 
         const tooltipLines = [
           `X: ${formatDateTime(r.t)}`,
-          `Y: ${r.y.toFixed(4)}`
+          `ОА радона: ${r.y.toFixed(1)}`
         ];
-
+        if (r.tempOut) {
+          tooltipLines.push(`T outdoor: ${r.tempOut.toFixed(1)}`);
+        }
+        if (r.tempIn) {
+          tooltipLines.push(`T indoor: ${r.tempIn.toFixed(1)}`);
+        }
+        tooltipLines.push("");
         if (r.fit) {
-          tooltipLines.push(`C0: ${r.fit.C0.toFixed(4)}`);
-          tooltipLines.push(`Phi: ${r.fit.phi.toFixed(6)}`);
+          tooltipLines.push(`C0: ${r.fit.C0.toFixed(1)}`);
+          tooltipLines.push(`Phi: ${r.fit.phi.toFixed(1)}`);
           tooltipLines.push(`Lambda: ${r.fit.lambda.toFixed(10)}`);
         }
 
@@ -1328,11 +1357,11 @@
 
       function updateSummary() {
         const n = state.rows.length;
-        const f1 = state.rows.filter(r => r.flag === 1).length;
         const f0 = state.rows.filter(r => r.flag === 0).length;
+        const f1 = state.rows.filter(r => r.flag === 1).length;
         const none = n - f1 - f0;
         const segs = state.fits.length;
-        const parts = [`Участков накопления: ${f1}`, `Участков разбавления: ${f0}`, `Не выбрано: ${none}`, `Сегментов для подгонки: ${segs}`];
+        const parts = [`Точек накопления: ${f0}`, `Точек разбавления: ${f1}`, `Не выбрано: ${none}`, `Подогнанных сегментов: ${segs}`];
         fitText.textContent = `${parts.join("\n")}`;
       }
 
@@ -1354,10 +1383,11 @@
       }
 
       function buildExportText(delim) {
-        const header = [`datetime`, `radon`, `flag`, `C0`, `phi`, `lambda`].join(delim);
+        const header = [`№ участка`,`Дата и время`, `ОА радона`, `Флаг проветривания (1 - разбавление, 0 - накопление)`, `C0`, `Phi`, `Lambda`].join(delim);
         const lines = [header];
         for (const r of state.rows) {
           lines.push([
+            r.fit ? r.fit.id : "",
             formatDateTime(r.t),
             String(r.y),
             String(r.flag == null ? "" : r.flag),
