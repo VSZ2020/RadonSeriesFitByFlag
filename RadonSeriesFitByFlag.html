@@ -50,16 +50,15 @@
             flex-wrap: wrap;
             gap: 8px;
             align-items: center;
-            margin-bottom: 10px;
         }
 
         button,
         .file-label {
-            border: 1px solid #94a3b8;
-            background: #eef2ff;
+            border: 1px solid #c2c2c2;
+            background: #f8f8f8;
             color: #111827;
             padding: 8px 12px;
-            border-radius: 10px;
+            border-radius: 8px;
             cursor: pointer;
             font-size: 14px;
             user-select: none;
@@ -67,14 +66,22 @@
 
         button:hover,
         .file-label:hover {
-            background: #e0e7ff;
+            background: #dddddd;
         }
 
         button.active {
-            background: var(--blue);
             color: #fff;
-            border-color: #1d4ed8;
             box-shadow: 0 0 0 2px rgba(37, 99, 235, .15) inset;
+        }
+        
+        button.accumulation.active {
+            background: var(--red);
+            border-color: #c4223d;
+        }
+
+        button.ventilation.active {
+            background: var(--blue);           
+            border-color: #1d4ed8;
         }
 
         button.secondary.active {
@@ -155,7 +162,7 @@
             border: 1px solid var(--border);
             border-radius: 10px;
             padding: 10px 12px;
-            background: #fff7f7;
+            background: #e7e7e7;
         }
 
         .constraints-box b {
@@ -170,31 +177,6 @@
 
         .mini-row>* {
             flex: 0 0 auto;
-        }
-
-        .status {
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 10px 12px;
-            background: #fbfdff;
-            font-size: 13px;
-            line-height: 1.5;
-        }
-
-        .status .line {
-            display: block;
-        }
-
-        .status .dim {
-            color: var(--muted);
-        }
-
-        .status .good {
-            color: var(--green);
-        }
-
-        .status .warn {
-            color: #b45309;
         }
 
         .canvas-wrap {
@@ -272,17 +254,17 @@
     <div class="layout">
         <section class="left card">
             <div>
-                <div style="font-weight:600; margin-bottom:6px;">Исходная серия</div>
+                <div style="font-weight:600; margin-bottom:6px;">Вставьте временную серию ниже</div>
                 <textarea id="inputText" spellcheck="false" placeholder="Пример таблицы
-Дата и время[TAB]ОА радона[TAB]Флаг[TAB]Т(outdoor)[TAB]Т(indoor)[TAB]
-20.04.2026 12:00:00[TAB]123.4[TAB]1[TAB]12.4[TAB]26.1
-20.04.2026 13:00:00[TAB]125.2[TAB]1[TAB]13.2[TAB]26.2
-20.04.2026 14:00:00[TAB]130.7[TAB]1[TAB]15.6[TAB]23.0
+Дата и время       [TAB]ОА радона[TAB]Флаг[TAB]Т(outdoor)[TAB]Т(indoor)
+20.04.2026 12:00:00[TAB]123.4    [TAB]1   [TAB]12.4      [TAB]26.1
+20.04.2026 13:00:00[TAB]125.2    [TAB]1   [TAB]13.2      [TAB]26.2
+20.04.2026 14:00:00[TAB]130.7    [TAB]1   [TAB]15.6      [TAB]23.0
 
-Здесь [TAB] - разделитель между колонками. При копировании таблицы из Excel значения уже разделены табуляцией.
+Здесь [TAB] - разделитель между колонками - табуляция. При копировании таблицы из Excel значения уже разделены табуляцией.
 Формат даты и времени зависит от установленных в вашей системе региональных стандартов."></textarea>
                 <div class="small-note" style="margin-top:0px;margin-bottom:6px;">
-                    Поддерживаются разделители таб, запятая и точка с запятой. Если есть третья колонка, она может содержать флаг 0/1.
+                    Поддерживаются разделители: табуляция, запятая и точка с запятой. Если есть третья колонка, она может содержать флаг проветривания - 0 или 1.
                 </div>
                 <div class="toolbar">
                     <button id="loadTextBtn">Загрузить серию из поля ввода</button>
@@ -302,16 +284,10 @@
                 3) удерживайте Ctrl и выделяйте интервал точек, которым нужно установить флаг;<br>
                 4) по окончании работы экспортируйте таблицу со всеми данными.
             </div>
-
-            <div class="status" id="statusBox">
-                <span class="line"><b>Статус:</b> <span id="statusText">данные не загружены</span></span>
-                <span class="line dim" id="fitText">Fit: -</span>
-                <span class="line dim" id="selectionText">Выделение: -</span>
-            </div>
         </section>
 
         <div class="constraints-box">
-            <b>Ограничители параметров аппроксимации</b><br>
+            <span style="margin-bottom:6px; display: flex;"><b>Ограничители параметров аппроксимации</b></span>
             <span>Мин. lambda</span>
             <input type="number" placeholder="1e-10" value="1e-10" id="lambdaMin" class="constraint-input">
             <span>Макс. lambda</span>
@@ -326,17 +302,14 @@
         <section class="card" style="padding:10px; margin-top:0px;">
             <div class="mini-row" style="margin-bottom:10px;">
                 <div class="button-container">
-                    <span style="padding:10px;">Выберите флаг</span>
-                    <button id="flagAccBtn">Флаг 0 (Накопление)</button>
-                    <button id="flagVentBtn">Флаг 1 (Разбавление)</button>
-                    <button id="noneBtn" class="secondary active">Не выбрано</button>
+                    <span style="padding:10px;">Выберите тип участка</span>
+                    <button id="flagAccBtn" class="accumulation">Накопление (флаг - 0)</button>
+                    <button id="flagVentBtn" class="ventilation">Разбавление (флаг - 1)</button>
+                    <button id="noneBtn" class="secondary active">Не задан</button>
                     <span class="divider"></span>
+                    <span style="padding:10px;">Масштаб</span>
                     <button id="logYBtn">Log Y: OFF</button>
                     <button id="resetZoomBtn">Сброс масштаба</button>
-                    <span class="divider"></span>
-                    <button id="exportCsvBtn">Экспорт данных в CSV</button>
-                    <button id="exportTxtBtn">Экспорт в TXT</button>
-                    <button id="copyBtn">Экспорт в буфер обмена</button>
                 </div>
             </div>
             <section class="right card">
@@ -346,6 +319,7 @@
                 </div>
             </section>
             <div class="mini-row" style="margin-top:10px;margin-bottom:10px;">
+                <span style="padding:10px;">Управление на графике</span>
                 <span class="pill">Ctrl + ЛКМ с выделением области - назначить флаг</span>
                 <span class="pill">Ctrl + ПКМ с выделением области - снять флаг</span>
                 <span class="pill">Колесо - масштаб по X вокруг курсора</span>
@@ -355,6 +329,13 @@
 
             <section class="card" style="padding:12px;">
                 <div style="font-weight:600; margin-bottom:8px;">Предпросмотр данных</div>
+                <div class="mini-row" style="margin-bottom:10px;">
+                <div class="button-container">
+                    <button id="exportCsvBtn">Экспорт в CSV</button>
+                    <button id="exportTxtBtn">Экспорт в TXT</button>
+                    <button id="copyBtn">Экспорт в буфер обмена</button>
+                </div>
+            </div>
                 <div style="overflow:auto; max-height:360px; border:1px solid var(--border); border-radius:10px;">
                     <table id="previewTable" style="width:100%; border-collapse:collapse; font-size:12px; text-align:center;">
                         <thead style="position:sticky; top:0; background:#f9fafb;">
@@ -385,7 +366,6 @@
             const ctx = canvas.getContext("2d");
             const fileInput = $("fileInput");
             const inputText = $("inputText");
-            const statusText = $("statusText");
             const fitText = $("fitText");
             const selectionText = $("selectionText");
             const previewTableBody = document.querySelector("#previewTable tbody");
@@ -447,8 +427,10 @@
                 btn.classList.add("active");
             }
 
-            $("flagAccBtn").addEventListener("click", () => { state.activeFlag = 0;
-                setActiveButton($("flagAccBtn")); });
+            $("flagAccBtn").addEventListener("click", () => { 
+                state.activeFlag = 0;
+                setActiveButton($("flagAccBtn")); 
+            });
             $("flagVentBtn").addEventListener("click", () => { state.activeFlag = 1;
                 setActiveButton($("flagVentBtn")); });
             $("noneBtn").addEventListener("click", () => { state.activeFlag = null;
@@ -502,16 +484,11 @@
                 const text = buildExportText("\t");
                 try {
                     await navigator.clipboard.writeText(text);
-                    statusText.textContent = "таблица скопирована в буфер обмена";
                 } catch {
                     alert("Не удалось скопировать в буфер обмена.");
                 }
             });
 
-            function updateStatus(msg, kind = "") {
-                statusText.textContent = msg;
-                statusText.className = kind;
-            }
 
             function parseNumber(s) {
                 if (s == null) return NaN;
@@ -683,7 +660,6 @@
                 updateSummary();
                 updatePreviewTable();
                 render();
-                updateStatus(`загружено точек: ${state.rows.length}`, "good");
             }
 
             // ========== ОГРАНИЧИТЕЛИ ==========
