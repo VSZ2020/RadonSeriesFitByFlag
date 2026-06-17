@@ -277,9 +277,10 @@
       <div>
         <div style="font-weight:600; margin-bottom:6px;">Исходная серия</div>
         <textarea id="inputText" spellcheck="false" placeholder="Пример таблицы
-20.05.2026 12:00:00[TAB]123.4
-20.05.2026 13:00:00[TAB]125.2
-20.05.2026 14:00:00[TAB]130.7
+Дата и время[TAB]ОА радона[TAB]Флаг[TAB]Т(outdoor)[TAB]T(indoor)[TAB]
+20.04.2026 12:00:00[TAB]123.4[TAB]1[TAB]12.4[TAB]26.1
+20.04.2026 13:00:00[TAB]125.2[TAB]1[TAB]13.2[TAB]26.2
+20.04.2026 14:00:00[TAB]130.7[TAB]1[TAB]15.6[TAB]23.0
 
 Здесь [TAB] - разделитель между колонками. При копировании таблицы из Excel значения уже разделены табуляцией.
 Формат даты и времени зависит от установленных в вашей системе региональных стандартов."></textarea>
@@ -331,8 +332,8 @@
       <div class="mini-row" style="margin-bottom:10px;">
         <div class="button-container">
           <span style="padding:10px;">Выберите флаг</span>
-          <button id="flag1Btn">Флаг 1 (Накопление)</button>
-          <button id="flag0Btn">Флаг 0 (Разбавление)</button>
+          <button id="flagAccBtn">Флаг 0 (Накопление)</button>
+          <button id="flagVentBtn">Флаг 1 (Разбавление)</button>
           <button id="noneBtn" class="secondary active">Не выбрано</button>
           <span class="divider"></span>
           <button id="logYBtn">Log Y: OFF</button>
@@ -425,12 +426,12 @@
       let maxPhi = 2000.0;
 
       function setActiveButton(btn) {
-        [$("flag1Btn"), $("flag0Btn"), $("noneBtn")].forEach(b => b.classList.remove("active"));
+        [$("flagAccBtn"), $("flagVentBtn"), $("noneBtn")].forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
       }
 
-      $("flag1Btn").addEventListener("click", () => { state.activeFlag = 1; setActiveButton($("flag1Btn")); });
-      $("flag0Btn").addEventListener("click", () => { state.activeFlag = 0; setActiveButton($("flag0Btn")); });
+      $("flagAccBtn").addEventListener("click", () => { state.activeFlag = 0; setActiveButton($("flagAccBtn")); });
+      $("flagVentBtn").addEventListener("click", () => { state.activeFlag = 1; setActiveButton($("flagVentBtn")); });
       $("noneBtn").addEventListener("click", () => { state.activeFlag = null; setActiveButton($("noneBtn")); });
 
       $("resetZoomBtn").addEventListener("click", () => {
@@ -1095,7 +1096,7 @@
           if (idxs.length < 2) continue;
 
           ctx.strokeStyle =
-            fit.flag === 1
+            fit.flag === 0
               ? "rgba(220,38,38,.75)"
               : "rgba(37,99,235,.75)";
 
@@ -1180,8 +1181,8 @@
 
           let fill = "#6b7280";
 
-          if (r.flag === 1) fill = "#dc2626";
-          if (r.flag === 0) fill = "#2563eb";
+          if (r.flag === 0) fill = "#dc2626";
+          if (r.flag === 1) fill = "#2563eb";
 
           const radius = hovered ? 5.5 : 3.8;
 
