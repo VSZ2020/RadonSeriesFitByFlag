@@ -798,7 +798,7 @@
         const ys = pts.map(p => p.y);
         const C0 = ys[0];
 
-        let lambda = 0.01;
+        let lambda = minLambda;
         let phi = Math.max(minPhi, Math.min(maxPhi, ys[Math.max(ys.length - 1, 0)] * lambda));
         let mu = 1e-3;
         let bestErr = Infinity;
