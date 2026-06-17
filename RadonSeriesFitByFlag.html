@@ -391,7 +391,6 @@
             const previewTableBody = document.querySelector("#previewTable tbody");
 
             // ========== ОТСТУПЫ ==========
-            // Увеличил правый отступ для размещения правой шкалы
             const M = { l: 82, r: 58, t: 18, b: 58 };
 
             // ========== СОСТОЯНИЕ ==========
@@ -1094,9 +1093,6 @@
                     ctx.stroke();
                 }
 
-                // Правая шкала (температура) — свои горизонтальные линии не рисуем (уже есть от левой),
-                // но можно добавить пунктир, если нужно. Оставим как есть.
-
                 // X ticks
                 const xTicks = niceTicks(state.viewMinX, state.viewMaxX, 7);
                 for (const v of xTicks) {
@@ -1116,7 +1112,7 @@
                 ctx.lineTo(x1, y1);
                 ctx.stroke();
 
-                // Правая ось (добавлена)
+                // Правая ось
                 ctx.beginPath();
                 ctx.moveTo(x1, y0);
                 ctx.lineTo(x1, y1);
@@ -1137,7 +1133,7 @@
                     ctx.stroke();
                     ctx.fillText(state.logY ? `10^${Math.round(Math.log10(v))}` : formatY(v), x0 - 8, y);
                 }
-
+    
                 // Правая ось: метки
                 const rightTicks = niceTicks(state.tempMinY, state.tempMaxY, 6);
                 ctx.textAlign = "left";
@@ -1188,8 +1184,6 @@
                 ctx.textAlign = "center";
                 ctx.textBaseline = "top";
                 ctx.fillText("Температура, °C", 0, 0);
-                ctx.restore();
-
                 ctx.restore();
             }
 
@@ -1794,12 +1788,6 @@
                         state.viewMaxY = state.dataMaxY + fullRangeY * 2;
                         state.viewMinY = state.viewMaxY - currentRangeY;
                     }
-
-                    // Pan Y для правой шкалы (температура) — синхронизируем с левой по положению
-                    // Просто пересчитываем tempMinY/tempMaxY относительно текущего view
-                    // Но лучше оставить их привязанными к данным, не синхронизировать с панорамированием левой оси.
-                    // Правая шкала всегда показывает полный диапазон температур.
-                    // Поэтому ничего не делаем.
 
                     state.lastPt = p;
                     render();
