@@ -89,6 +89,11 @@
             border-color: #374151;
         }
 
+        button.csv {
+            background: #16a34a;
+            color: white;
+        }
+
         .pill {
             display: inline-flex;
             align-items: center;
@@ -143,12 +148,12 @@
 
         .help {
             font-size: 13px;
-            color: var(--muted);
+            color: var(--black);
             line-height: 1.45;
             border: 1px solid var(--border);
             border-radius: 10px;
             padding: 10px 12px;
-            background: #fafafa;
+            background: #e4ffe1;
         }
 
         .help b {
@@ -162,7 +167,7 @@
             border: 1px solid var(--border);
             border-radius: 10px;
             padding: 10px 12px;
-            background: #e7e7e7;
+            background: #fff5eb;
         }
 
         .constraints-box b {
@@ -278,7 +283,7 @@
             </div>
 
             <div class="help">
-                <b>Как работать:</b><br>
+                <b>💡 Как работать:</b><br>
                 1) загрузите временную серию в поле для ввода и нажмите «Загрузить из поля для ввода»;<br>
                 2) выберите режим «Флаг 1», «Флаг 0»;<br>
                 3) удерживайте Ctrl и выделяйте интервал точек, которым нужно установить флаг;<br>
@@ -287,7 +292,7 @@
         </section>
 
         <div class="constraints-box">
-            <span style="margin-bottom:6px; display: flex;"><b>Ограничители параметров аппроксимации</b></span>
+            <span style="margin-bottom:6px; display: flex;"><b>🚧 Ограничители параметров аппроксимации</b></span>
             <span>Мин. lambda</span>
             <input type="number" placeholder="1e-10" value="1e-10" id="lambdaMin" class="constraint-input">
             <span>Макс. lambda</span>
@@ -322,17 +327,17 @@
                 <span style="padding:10px;">Управление на графике</span>
                 <span class="pill">Ctrl + ЛКМ с выделением области - назначить флаг</span>
                 <span class="pill">Ctrl + ПКМ с выделением области - снять флаг</span>
-                <span class="pill">Колесо - масштаб по X вокруг курсора</span>
-                <span class="pill">Shift + Колесо - масштаб по Y вокруг курсора</span>
+                <span class="pill">Колесо мыши - масштаб по X</span>
+                <span class="pill">Shift + Колесо - масштаб по Y</span>
                 <span class="pill">ЛКМ - панорамирование</span>
             </div>
-
-            <section class="card" style="padding:12px;">
+        </section>
+        <section class="card" style="padding:12px;">
                 <div style="font-weight:600; margin-bottom:8px;">Предпросмотр данных</div>
                 <div class="mini-row" style="margin-bottom:10px;">
                 <div class="button-container">
-                    <button id="exportCsvBtn">Экспорт в CSV</button>
-                    <button id="exportTxtBtn">Экспорт в TXT</button>
+                    <button id="exportCsvBtn" class="csv">Экспорт в .csv</button>
+                    <button id="exportTxtBtn">Экспорт в .txt</button>
                     <button id="copyBtn">Экспорт в буфер обмена</button>
                 </div>
             </div>
@@ -356,7 +361,6 @@
                     </table>
                 </div>
             </section>
-        </section>
     </div>
 
     <script>
