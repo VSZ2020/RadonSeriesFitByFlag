@@ -309,7 +309,6 @@
 
       <div class="status" id="statusBox">
         <span class="line"><b>Статус:</b> <span id="statusText">данные не загружены</span></span>
-        <span class="line dim" id="cursorText">Курсор: -</span>
         <span class="line dim" id="fitText">Fit: -</span>
         <span class="line dim" id="selectionText">Выделение: -</span>
       </div>
@@ -365,12 +364,13 @@
           <table id="previewTable" style="width:100%; border-collapse:collapse; font-size:12px; text-align:center;">
             <thead style="position:sticky; top:0; background:#f9fafb;">
               <tr>
-                <th style="padding:6px; border-bottom:1px solid var(--border);">datetime</th>
-                <th style="padding:6px; border-bottom:1px solid var(--border);">radon</th>
-                <th style="padding:6px; border-bottom:1px solid var(--border);">flag</th>
+                <th style="padding:6px; border-bottom:1px solid var(--border);">ID</th>
+                <th style="padding:6px; border-bottom:1px solid var(--border);">Дата и время</th>
+                <th style="padding:6px; border-bottom:1px solid var(--border);">ОА радона</th>
+                <th style="padding:6px; border-bottom:1px solid var(--border);">Флаг</th>
                 <th style="padding:6px; border-bottom:1px solid var(--border);">C0</th>
-                <th style="padding:6px; border-bottom:1px solid var(--border);">phi</th>
-                <th style="padding:6px; border-bottom:1px solid var(--border);">lambda</th>
+                <th style="padding:6px; border-bottom:1px solid var(--border);">Phi</th>
+                <th style="padding:6px; border-bottom:1px solid var(--border);">Lambda</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -387,7 +387,6 @@
       const fileInput = $("fileInput");
       const inputText = $("inputText");
       const statusText = $("statusText");
-      const cursorText = $("cursorText");
       const fitText = $("fitText");
       const selectionText = $("selectionText");
       const previewTableBody = document.querySelector("#previewTable tbody");
@@ -542,8 +541,18 @@
 
       function formatDateTime(ms) {
         const d = new Date(ms);
-        const pad = n => String(n).padStart(2, "0");
-        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+        // const pad = n => String(n).padStart(2, "0");
+        const formatter = Intl.DateTimeFormat([], {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            hour12: false
+        });
+        return formatter.format(d).replace(',', '');
+        // return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
       }
 
       function parseSeriesText(text) {
@@ -560,11 +569,14 @@
           // Try to use the last column as flag when present.
           let maybeFlag = null;
           let flagCol = null;
-          const last = parts[parts.length - 1];
-          if (last === "0" || last === "1") {
-            maybeFlag = Number(last);
-            flagCol = parts.length - 1;
+          if (parts.length > 2){
+            const flagColText = parts[2];
+            if (flagColText === "0" || flagColText === "1") {
+              maybeFlag = Number(flagColText);
+              flagCol = 2;
+            }
           }
+          
 
           // Heuristics:
           // 1) datetime in first cell, value in second/third cell.
@@ -608,7 +620,7 @@
           t: r.t,
           y: r.y,
           flag: r.flag === 0 || r.flag === 1 ? r.flag : null,
-          fit: null
+          fit: null,
         }));
         resetView();
         recomputeFits();
@@ -869,13 +881,14 @@
       function recomputeFits() {
         state.fits = [];
         const runs = segmentRuns();
-        for (const run of runs) {
+        for (const [i, run] of runs.entries()) {
           if (run.flag === 0 || run.flag === 1) {
             const idxs = [];
             for (let i = run.start; i < run.end; i++) idxs.push(i);
             const fit = fitSegmentLM(idxs);
             if (fit) {
               fit.flag = run.flag;
+              fit.id = i + 1;
               state.fits.push(fit);
               for (let i = run.start; i < run.end; i++) state.rows[i].fit = fit;
             }
@@ -1323,18 +1336,6 @@
         fitText.textContent = `${parts.join("\n")}`;
       }
 
-      function setCursorInfo() {
-        if (state.cursorIndex < 0 || state.cursorIndex >= state.rows.length) {
-          cursorText.textContent = "Курсор: -";
-          return;
-        }
-        const r = state.rows[state.cursorIndex];
-        const fitExtra = r.fit
-          ? ` | C0=${r.fit.C0.toFixed(4)} | Phi=${r.fit.phi.toFixed(6)} | Lambda=${r.fit.lambda.toFixed(10)}`
-          : "";
-        cursorText.textContent = `Курсор: ${formatDateTime(r.t)} | y=${r.y.toFixed(4)} | Флаг=${r.flag == null ? "-" : r.flag}${fitExtra}`;
-      }
-
       function setSelectionInfo(text) {
         selectionText.textContent = `Выделение: ${text}`;
       }
@@ -1376,6 +1377,7 @@
         for (const r of state.rows.slice(0, 500)) {
           const tr = document.createElement("tr");
           tr.innerHTML = `
+        <td style="padding:6px;border-bottom:1px solid #eee;">${r.fit ? r.fit.id : ""}</td>
         <td style="padding:6px;border-bottom:1px solid #eee;">${formatDateTime(r.t)}</td>
         <td style="padding:6px;border-bottom:1px solid #eee;">${r.y}</td>
         <td style="padding:6px;border-bottom:1px solid #eee;">${r.flag == null ? "" : r.flag}</td>
@@ -1423,7 +1425,6 @@
         state.mouseX = p.x; state.mouseY = p.y;
         if (state.rows.length) {
           state.cursorIndex = nearestPoint(p.x, p.y).idx;
-          setCursorInfo();
         }
 
         if (!state.dragging) {
@@ -1604,7 +1605,6 @@
 
       canvas.addEventListener("pointerleave", () => {
         state.cursorIndex = -1;
-        setCursorInfo();
         if (!state.dragging) render();
       });
 
