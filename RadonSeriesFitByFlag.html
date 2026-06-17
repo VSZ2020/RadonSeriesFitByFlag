@@ -366,8 +366,9 @@
                                 <th style="padding:6px; border-bottom:1px solid var(--border);">C0</th>
                                 <th style="padding:6px; border-bottom:1px solid var(--border);">Phi</th>
                                 <th style="padding:6px; border-bottom:1px solid var(--border);">Lambda</th>
-                                <th style="padding:6px; border-bottom:1px solid var(--border);">T outdoor, C</th>
-                                <th style="padding:6px; border-bottom:1px solid var(--border);">T indoor, C</th>
+                                <th style="padding:6px; border-bottom:1px solid var(--border);">T outdoor, °C</th>
+                                <th style="padding:6px; border-bottom:1px solid var(--border);">T indoor, °C</th>
+                                <th style="padding:6px; border-bottom:1px solid var(--border);">Delta T (In - Out), °C</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -424,9 +425,11 @@
                 showRadon: true,
                 showTempOut: true,
                 showTempIn: true,
+                showDeltaTemp: true,
                 // Флаг наличия температурных данных
                 hasTempOut: false,
                 hasTempIn: false,
+                hasDeltaTemp: false,
                 // Для интерактивной легенды
                 legendItems: [],
             };
@@ -661,17 +664,20 @@
                     flag: r.flag === 0 || r.flag === 1 ? r.flag : null,
                     tempOut: r.tempOut,
                     tempIn: r.tempIn,
+                    deltaTemp: r.tempOut !== null && r.tempIn !== null ? r.tempIn - r.tempOut : null,
                     fit: null,
                 }));
 
                 // Проверяем наличие температур
                 state.hasTempOut = state.rows.some(r => r.tempOut !== null && isFinite(r.tempOut));
                 state.hasTempIn = state.rows.some(r => r.tempIn !== null && isFinite(r.tempIn));
+                state.hasDeltaTemp = state.rows.some(r => r.deltaTemp !== null && isFinite(r.deltaTemp));
 
                 // По умолчанию показываем все
                 state.showRadon = true;
                 state.showTempOut = true;
                 state.showTempIn = true;
+                state.showDeltaTemp = true;
 
                 resetView();
                 recomputeFits();
@@ -757,6 +763,7 @@
                 for (const r of state.rows) {
                     if (r.tempOut !== null && isFinite(r.tempOut)) temps.push(r.tempOut);
                     if (r.tempIn !== null && isFinite(r.tempIn)) temps.push(r.tempIn);
+                    if (r.deltaTemp !== null && isFinite(r.deltaTemp)) temps.push(r.deltaTemp);
                 }
                 if (temps.length) {
                     const tmin = Math.min(...temps);
@@ -987,6 +994,7 @@
             }
 
             function recomputeFits() {
+                let segmentsCounter = 0;
                 state.fits = [];
                 const runs = segmentRuns();
                 for (const [i, run] of runs.entries()) {
@@ -996,7 +1004,7 @@
                         const fit = fitSegmentLM(idxs);
                         if (fit) {
                             fit.flag = run.flag;
-                            fit.id = i + 1;
+                            fit.id = ++segmentsCounter;
                             state.fits.push(fit);
                             for (let i = run.start; i < run.end; i++) state.rows[i].fit = fit;
                         }
@@ -1331,6 +1339,23 @@
                     ctx.stroke();  
                 }
 
+                // ---- Delta T (violet) ----
+                if (state.showDeltaTemp && state.hasDeltaTemp) {
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = "#7f00ff";
+                    ctx.beginPath();
+                    let started = false;
+                    for (const r of state.rows) {
+                        if (r.deltaTemp === null || !isFinite(r.deltaTemp)) continue;
+                        if (!isFinite(r.t)) continue;
+                        const x = xToPx(r.t);
+                        const y = yRightToPx(r.deltaTemp);
+                        if (!started) { ctx.moveTo(x, y);
+                            started = true; } else { ctx.lineTo(x, y); }
+                    }
+                    ctx.stroke();  
+                }
+
                 ctx.restore();
             }
 
@@ -1353,6 +1378,11 @@
                 if (state.hasTempIn) {
                     items.push({ key: 'tempIn', label: 'T indoor', color: state.showTempIn ? '#22c55e' : '#9ca3af',
                         visible: state.showTempIn });
+                }
+
+                if (state.hasDeltaTemp) {
+                    items.push({ key: 'deltaTemp', label: 'Delta T', color: state.showDeltaTemp ? '#7f00ff' : '#9ca3af',
+                        visible: state.showDeltaTemp });
                 }
 
                 if (!items.length) return;
@@ -1456,13 +1486,18 @@
                     `ОА радона: ${r.y.toFixed(1)}`
                 ];
                 if (r.tempOut !== null && isFinite(r.tempOut)) {
-                    tooltipLines.push(`T outdoor: ${r.tempOut.toFixed(1)}°C`);
+                    tooltipLines.push(`T outdoor: ${r.tempOut.toFixed(1)} °C`);
                 }
                 if (r.tempIn !== null && isFinite(r.tempIn)) {
-                    tooltipLines.push(`T indoor: ${r.tempIn.toFixed(1)}°C`);
+                    tooltipLines.push(`T indoor: ${r.tempIn.toFixed(1)} °C`);
                 }
-                tooltipLines.push("");
+                if (r.deltaTemp !== null && isFinite(r.deltaTemp)) {
+                    tooltipLines.push(`Delta T: ${r.deltaTemp.toFixed(1)} °C`);
+                }
+                
                 if (r.fit) {
+                    tooltipLines.push("");
+                    tooltipLines.push(`№ сегмента: ${r.fit.id}`);
                     tooltipLines.push(`C0: ${r.fit.C0.toFixed(1)}`);
                     tooltipLines.push(`Phi: ${r.fit.phi.toFixed(1)}`);
                     tooltipLines.push(`Lambda: ${r.fit.lambda.toFixed(10)}`);
@@ -1581,7 +1616,7 @@
 
             function buildExportText(delim) {
                 const header = [`№ участка`, `Дата и время`, `ОА радона`, `Флаг проветривания (1 - разбавление, 0 - накопление)`,
-                    `C0`, `Phi`, `Lambda`, `T_outdoor`, `T_indoor`
+                    `C0`, `Phi`, `Lambda`, `T outdoor`, `T indoor`, 'Delta T'
                 ].join(delim);
                 const lines = [header];
                 for (const r of state.rows) {
@@ -1595,6 +1630,7 @@
                         r.fit ? r.fit.lambda : "",
                         r.tempOut !== null && isFinite(r.tempOut) ? r.tempOut : "",
                         r.tempIn !== null && isFinite(r.tempIn) ? r.tempIn : "",
+                        r.deltaTemp !== null && isFinite(r.deltaTemp) ? r.deltaTemp : "",
                     ].join(delim));
                 }
                 return lines.join("\n");
@@ -1608,13 +1644,14 @@
                     tr.innerHTML = `
                     <td style="padding:6px;border-bottom:1px solid #eee;">${r.fit ? r.fit.id : ""}</td>
                     <td style="padding:6px;border-bottom:1px solid #eee;">${formatDateTime(r.t)}</td>
-                    <td style="padding:6px;border-bottom:1px solid #eee;">${r.y}</td>
+                    <td style="padding:6px;border-bottom:1px solid #eee;">${r.y.toFixed(1)}</td>
                     <td style="padding:6px;border-bottom:1px solid #eee;">${r.flag == null ? "" : r.flag}</td>
                     <td style="padding:6px;border-bottom:1px solid #eee;">${r.fit ? r.fit.C0.toFixed(1) : ""}</td>
                     <td style="padding:6px;border-bottom:1px solid #eee;">${r.fit ? r.fit.phi.toFixed(1) : ""}</td>
                     <td style="padding:6px;border-bottom:1px solid #eee;">${r.fit ? r.fit.lambda.toExponential(3) : ""}</td>
                     <td style="padding:6px;border-bottom:1px solid #eee;">${r.tempOut ? r.tempOut.toFixed(1) : ""}</td>
                     <td style="padding:6px;border-bottom:1px solid #eee;">${r.tempIn ? r.tempIn.toFixed(1) : ""}</td>
+                    <td style="padding:6px;border-bottom:1px solid #eee;">${r.deltaTemp ? r.deltaTemp.toFixed(1) : ""}</td>
                   `;
                     previewTableBody.appendChild(tr);
                 }
@@ -1663,6 +1700,8 @@
                         state.showTempOut = !state.showTempOut;
                     } else if (key === 'tempIn') {
                         state.showTempIn = !state.showTempIn;
+                    } else if (key === 'deltaTemp') {
+                        state.showDeltaTemp = !state.showDeltaTemp;
                     }
                     render();
                     return;
