@@ -371,7 +371,6 @@
             const fileInput = $("fileInput");
             const inputText = $("inputText");
             const fitText = $("fitText");
-            const selectionText = $("selectionText");
             const previewTableBody = document.querySelector("#previewTable tbody");
 
             // ========== ОТСТУПЫ ==========
@@ -661,7 +660,6 @@
 
                 resetView();
                 recomputeFits();
-                updateSummary();
                 updatePreviewTable();
                 render();
             }
@@ -704,7 +702,6 @@
                 maxPhi = parseFloat(maxPhiStr) ?? 2000.0;
 
                 recomputeFits();
-                updateSummary();
                 updatePreviewTable();
                 render();
             }
@@ -1005,7 +1002,6 @@
                 }
                 if (changed) {
                     recomputeFits();
-                    updateSummary();
                     render();
                 }
             }
@@ -1557,23 +1553,6 @@
                 ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
             }
 
-            // ========== ОБНОВЛЕНИЕ СТАТУСОВ ==========
-            function updateSummary() {
-                const n = state.rows.length;
-                const f0 = state.rows.filter(r => r.flag === 0).length;
-                const f1 = state.rows.filter(r => r.flag === 1).length;
-                const none = n - f1 - f0;
-                const segs = state.fits.length;
-                const parts = [`Точек накопления: ${f0}`, `Точек разбавления: ${f1}`, `Не выбрано: ${none}`,
-                    `Подогнанных сегментов: ${segs}`
-                ];
-                fitText.textContent = `${parts.join("\n")}`;
-            }
-
-            function setSelectionInfo(text) {
-                selectionText.textContent = `Выделение: ${text}`;
-            }
-
             // ========== ЭКСПОРТ ==========
             function exportData(delim, ext) {
                 const text = buildExportText(delim);
@@ -1690,12 +1669,10 @@
                     state.selecting = true;
                     state.panning = false;
                     state.rect = { x1: p.x, x2: p.x };
-                    setSelectionInfo("идёт выделение интервала");
                 } else {
                     state.panning = true;
                     state.selecting = false;
                     state.rect = null;
-                    setSelectionInfo("нет");
                 }
             });
 
@@ -1722,9 +1699,6 @@
                     const x0 = pxToX(state.rect.x1),
                         x1 = pxToX(state.rect.x2);
                     const idxs = visibleRangeIndices(x0, x1);
-                    setSelectionInfo(
-                        `X от ${formatDateTime(Math.min(x0, x1))} до ${formatDateTime(Math.max(x0, x1))} · точек: ${idxs.length}`
-                        );
                     render();
                     return;
                 }
@@ -1791,12 +1765,7 @@
                     const idxs = visibleRangeIndices(x0, x1);
                     if (idxs.length) {
                         applyFlagToIndices(idxs, resetMode ? null : state.activeFlag);
-                        setSelectionInfo(resetMode ? `сброшены флаги у точек: ${idxs.length}` :
-                            `применён флаг ${state.activeFlag == null ? "—" : state.activeFlag} к точкам: ${idxs.length}`
-                            );
-                    } else {
-                        setSelectionInfo("пусто");
-                    }
+                    } 
                     state.rect = null;
                     render();
                     return;
@@ -1807,10 +1776,6 @@
                     const near = nearestPoint(p.x, p.y);
                     if (near.idx >= 0 && near.dist2 <= PX_THRESH * PX_THRESH) {
                         applyFlagToIndices([near.idx], resetMode ? null : state.activeFlag);
-                        setSelectionInfo(resetMode ? `флаг точки ${near.idx + 1} сброшен` :
-                            `точка ${near.idx + 1} помечена как ${state.activeFlag == null ? "—" : state.activeFlag}`);
-                    } else {
-                        setSelectionInfo("точка не найдена рядом с курсором");
                     }
                 }
 
@@ -1874,7 +1839,6 @@
                 if (ev.key === "Escape") {
                     state.selecting = false;
                     state.rect = null;
-                    setSelectionInfo("сброшено");
                     render();
                 }
             });
@@ -1885,7 +1849,6 @@
             resizeCanvas();
             drawEmptyState();
             updateSummary();
-            setSelectionInfo("-");
         })();
     </script>
 </body>
