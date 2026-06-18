@@ -228,6 +228,16 @@
             gap: 8px;
         }
 
+        .legend-hint {
+            flex: 1 1 auto !important; 
+            min-width: 100px;          
+            max-width: 100%;           
+            white-space: normal !important;
+            overflow-wrap: anywhere !important;
+            word-break: break-word !important;
+            padding: 11px;
+        }
+
         .divider {
             width: 1px;
             height: 24px;
@@ -315,7 +325,9 @@
                     <span style="padding:10px;">Масштаб</span>
                     <button id="logYBtn">Log Y: OFF</button>
                     <button id="resetZoomBtn">Сброс масштаба</button>
+                    <span class="divider"></span>
                 </div>
+                <div class="legend-hint" style="color:var(--muted);font-size: smaller;">💡Подсказка: нажатие на элемент в легенде графика показывает/скрывает серию</div>
             </div>
             <section class="right card">
                 <div class="canvas-wrap">
@@ -330,7 +342,6 @@
                 <span class="pill">Колесо мыши - масштаб по X</span>
                 <span class="pill">Shift + Колесо - масштаб по Y</span>
                 <span class="pill">ЛКМ - панорамирование</span>
-                <span style="padding-left:10px;color:var(--muted);">Подсказка: нажатие на элемент в легенде графика показывает/скрывает серию</span>
             </div>
         </section>
         <section class="card" style="padding:12px;">
