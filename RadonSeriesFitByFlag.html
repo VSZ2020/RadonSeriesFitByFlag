@@ -73,6 +73,10 @@
             color: #fff;
             box-shadow: 0 0 0 2px rgba(37, 99, 235, .15) inset;
         }
+
+        button:disabled {
+            background-color: #dddddd;
+        }
         
         button.accumulation.active {
             background: var(--red);
@@ -350,7 +354,7 @@
                 <div class="button-container">
                     <button id="exportCsvBtn" class="csv">Экспорт в .csv</button>
                     <button id="exportTxtBtn">Экспорт в .txt</button>
-                    <button id="copyBtn">Экспорт в буфер обмена</button>
+                    <button id="copyBtn">Копировать в буфер обмена</button>
                 </div>
             </div>
                 <div style="overflow:auto; max-height:360px; border:1px solid var(--border); border-radius:10px;">
@@ -497,11 +501,20 @@
             $("exportTxtBtn").addEventListener("click", () => exportData("\t", "txt"));
             $("copyBtn").addEventListener("click", async () => {
                 const text = buildExportText("\t");
-                try {
-                    await navigator.clipboard.writeText(text);
-                } catch {
-                    alert("Не удалось скопировать в буфер обмена.");
-                }
+                navigator.clipboard.writeText(text)
+                .then(() => {
+                    const btn = $("copyBtn");
+                    const origText = btn.textContent;
+                    btn.textContent = "✓ Скопировано!";
+                    btn.disabled = true;
+                    setTimeout(() => {
+                        btn.textContent = origText;
+                        btn.disabled = false;
+                    }, 2000);
+                })
+                .catch(err => {
+                    alert("Не удалось скопировать текст в буфер обмена. Причина: " + err.message);
+                });
             });
 
 
