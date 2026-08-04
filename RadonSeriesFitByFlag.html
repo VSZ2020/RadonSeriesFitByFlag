@@ -272,6 +272,14 @@
 
     <div class="layout">
         <section class="left card">
+            <div class="help">
+                <b>💡 Как работать:</b><br>
+                1) загрузите временную серию в поле для ввода и нажмите «Загрузить из поля для ввода»;<br>
+                2) выберите режим «Флаг 1», «Флаг 0»;<br>
+                3) удерживайте Ctrl и выделяйте интервал точек, которым нужно установить флаг;<br>
+                4) по окончании работы экспортируйте таблицу со всеми данными.
+            </div>
+            
             <div>
                 <div style="font-weight:600; margin-bottom:6px;">Вставьте временную серию ниже</div>
                 <textarea id="inputText" spellcheck="false" placeholder="Пример таблицы
@@ -295,20 +303,12 @@
                     </label>
                 </div>
             </div>
-
-            <div class="help">
-                <b>💡 Как работать:</b><br>
-                1) загрузите временную серию в поле для ввода и нажмите «Загрузить из поля для ввода»;<br>
-                2) выберите режим «Флаг 1», «Флаг 0»;<br>
-                3) удерживайте Ctrl и выделяйте интервал точек, которым нужно установить флаг;<br>
-                4) по окончании работы экспортируйте таблицу со всеми данными.
-            </div>
         </section>
 
         <div class="constraints-box">
             <span style="margin-bottom:6px; display: flex;"><b>🚧 Ограничители параметров аппроксимации</b></span>
             <span>Мин. lambda</span>
-            <input type="number" placeholder="1e-10" value="1e-10" id="lambdaMin" class="constraint-input">
+            <input type="number" placeholder="0.01" value="0.01" id="lambdaMin" class="constraint-input">
             <span>Макс. lambda</span>
             <input type="number" placeholder="2.0" value="2.0" id="lambdaMax" class="constraint-input">
             <span>Мин. Phi</span>
