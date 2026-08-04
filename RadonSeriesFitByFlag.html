@@ -252,12 +252,17 @@
             background-color: #ccc;
         }
 
+        #previewTable thead tr th {
+            padding:6px; 
+            border-bottom:1px solid var(--border);
+        }
+
         .footer {
-                font-size: 12px;
-                font-style: italic;
-                color: lightgray;
-                text-align: center;
-            }
+            font-size: 12px;
+            font-style: italic;
+            color: lightgray;
+            text-align: center;
+        }
 
         @media (max-width: 980px) {
             .layout {
@@ -365,32 +370,35 @@
                 <div style="font-weight:600; margin-bottom:8px;">Предпросмотр данных</div>
                 <div class="mini-row" style="margin-bottom:10px;">
                 <div class="button-container">
-                    <button id="exportCsvBtn" class="csv">Экспорт в .csv</button>
-                    <button id="exportTxtBtn">Экспорт в .txt</button>
-                    <button id="copyBtn">Копировать в буфер обмена</button>
-
-                    <span>Формат даты при экспорте</span>
+                    <span>Формат даты для экспорта и отображения</span>
                     <input type="radio" id="radioBtnEnFormat" name="format" checked/>
                     <label for="radioBtnEnFormat">yyyy-mm-dd HH:MM:SS</label>
 
                     <input type="radio" id="radioBtnRuFormat" name="format"/>
                     <label for="radioBtnRuFormat">dd.mm.yyyy HH:MM:SS</label>
+
+                    <button id="exportCsvBtn" class="csv">Экспорт в .csv</button>
+                    <button id="exportTxtBtn">Экспорт в .txt</button>
+                    <button id="copyBtn">Копировать в буфер обмена</button>
+
+                    <input type="checkbox" id="isColoredTable"/>
+                    <label for="isColoredTable">Цвет строки в цвет типа интервала</label>
                 </div>
             </div>
                 <div style="overflow:auto; max-height:360px; border:1px solid var(--border); border-radius:10px;">
                     <table id="previewTable" style="width:100%; border-collapse:collapse; font-size:12px; text-align:center;">
                         <thead style="position:sticky; top:0; background:#f9fafb;">
                             <tr>
-                                <th style="padding:6px; border-bottom:1px solid var(--border);">№ участка</th>
-                                <th style="padding:6px; border-bottom:1px solid var(--border);">Дата и время</th>
-                                <th style="padding:6px; border-bottom:1px solid var(--border);">ОА радона</th>
-                                <th style="padding:6px; border-bottom:1px solid var(--border);">Флаг разбавления</th>
-                                <th style="padding:6px; border-bottom:1px solid var(--border);">C0</th>
-                                <th style="padding:6px; border-bottom:1px solid var(--border);">Phi</th>
-                                <th style="padding:6px; border-bottom:1px solid var(--border);">Lambda</th>
-                                <th style="padding:6px; border-bottom:1px solid var(--border);">T outdoor, °C</th>
-                                <th style="padding:6px; border-bottom:1px solid var(--border);">T indoor, °C</th>
-                                <th style="padding:6px; border-bottom:1px solid var(--border);">Delta T (In - Out), °C</th>
+                                <th>№ участка</th>
+                                <th>Дата и время</th>
+                                <th>ОА радона</th>
+                                <th>Тип интервала</th>
+                                <th>C0</th>
+                                <th>Phi</th>
+                                <th>Lambda</th>
+                                <th>T outdoor, °C</th>
+                                <th>T indoor, °C</th>
+                                <th>Delta T (In - Out), °C</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -410,6 +418,7 @@
             const inputText = $("inputText");
             const fitText = $("fitText");
             const previewTableBody = document.querySelector("#previewTable tbody");
+            const previewTableHead = document.querySelector("#previewTable thead tr");
 
             // ========== ОТСТУПЫ ==========
             const M = { l: 82, r: 58, t: 18, b: 58 };
@@ -461,6 +470,12 @@
             let maxLambda = 2.0;
             let minPhi = 1.0;
             let maxPhi = 2000.0;
+
+            // ========== ЕДИНИЦЫ ИЗМЕРЕНИЯ ==========
+            let radonUnits = "Бк/м3";
+            let phiUnits = "Бк/м3/ч";
+            let lambdaUnits = "1/ч";
+            let temperatureUnits = "°С"
 
             // ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
             function setActiveButton(btn) {
@@ -543,6 +558,8 @@
                 });
             });
 
+            $("isColoredTable").addEventListener("change", () => updatePreviewTable());
+
 
             function parseNumber(s) {
                 if (s == null) return NaN;
@@ -606,6 +623,42 @@
                     hour12: false
                 });
                 return formatter.format(d).replace(',', '');
+            }
+
+            function detectRadonUnits(rows){
+                if (rows.filter((r) => r.y > 30).length > 0)
+                    radonUnits = "Бк/м3";
+                else
+                    radonUnits = "кБк/м3";
+            }
+
+            function getTimestepInMinues(rows){
+                if (rows.length < 2) return 60;
+                let minDiff = Infinity; // minues
+                const timestamps = rows.map(r => r.t.getTime());
+                const sortedTimestamps = [...timestamps].sort((a, b) => a - b);
+
+                for (let i = 1; i < sortedTimestamps.length; i++) {
+                    const diff = Math.abs(sortedTimestamps[i] - sortedTimestamps[i - 1]) / (1000 * 60);
+                    minDiff = Math.min(minDiff, diff);
+                }
+                return minDiff;
+            }
+
+            function detectPhiUnits(rows){
+                const step = getTimestepInMinues(rows);
+                if (step > 0 && step < 60) 
+                    return radonUnits + "/мин";
+                if (step > 60 && step < 60 * 24)
+                    return radonUnits + "/ч";
+            }
+
+            function detectLambdaUnits(rows){
+                const step = getTimestepInMinues(rows);
+                if (step > 0 && step < 60) 
+                    return "1/мин";
+                if (step > 60 && step < 60 * 24)
+                    return "1/ч";
             }
 
             // ========== ПАРСИНГ ==========
@@ -712,6 +765,8 @@
                     deltaTemp: r.tempOut !== null && r.tempIn !== null ? r.tempIn - r.tempOut : null,
                     fit: null,
                 }));
+
+                detectRadonUnits(state.rows);
 
                 // Проверяем наличие температур
                 state.hasTempOut = state.rows.some(r => r.tempOut !== null && isFinite(r.tempOut));
@@ -1217,7 +1272,7 @@
                 ctx.rotate(-Math.PI / 2);
                 ctx.textAlign = "center";
                 ctx.textBaseline = "top";
-                ctx.fillText("ОА радона", 0, 0);
+                ctx.fillText("ОА радона, " + radonUnits, 0, 0);
                 ctx.restore();
 
                 // Заголовок правой оси
@@ -1226,7 +1281,7 @@
                 ctx.rotate(Math.PI / 2);
                 ctx.textAlign = "center";
                 ctx.textBaseline = "top";
-                ctx.fillText("Температура, °C", 0, 0);
+                ctx.fillText("Температура, " + temperatureUnits, 0, 0);
                 ctx.restore();
             }
 
@@ -1640,10 +1695,15 @@
             }
 
             function buildExportText(delim) {
-                const header = [`№ участка`, `Дата и время`, `ОА радона`, `Флаг проветривания (1 - разбавление, 0 - накопление)`,
-                    `C0`, `Phi`, `Lambda`, `T outdoor`, `T indoor`, 'Delta T'
+                const header = [`№ участка`, `Дата и время`, `ОА радона, ${radonUnits}`, `Тип участка`,
+                    `C0, ${radonUnits}`, `Phi, ${phiUnits}`, `Lambda, ${lambdaUnits}`, `T outdoor, ${temperatureUnits}`, `T indoor, ${temperatureUnits}`, 'Delta T, ${temperatureUnits}'
                 ].join(delim);
-                const lines = [header];
+                const lines = [
+                    "# Результаты обработки временной серии ОА радона",
+                    "# Типы участков: Р - разбавление, Н - накопление, ТК - температурные колебания",
+                    "# Единицы измерения C0 - Бк/м3, Phi - Бк/м3/с или Бк/м3/ч (зависит от шага серии), Lambda - 1/с или 1/ч (зависит от шага серии)",
+                    header
+                ];
                 for (const r of state.rows) {
                     lines.push([
                         r.fit ? r.fit.id : "",
@@ -1663,9 +1723,38 @@
 
             function updatePreviewTable() {
                 if (!previewTableBody) return;
+                previewTableHead.innerHTML = "";
+                const headers = [
+                    "№ участка",
+                    "Дата и время",
+                    "ОА радона, " + radonUnits,
+                    "Тип участка",
+                    "C0, " + radonUnits,
+                    "Phi, " + phiUnits,
+                    "Lambda, " + lambdaUnits,
+                    state.hasTempOut ? "T outdoor, " + temperatureUnits : "",
+                    state.hasTempIn ? "T indoor, " + temperatureUnits : "",
+                    state.hasDeltaTemp ? "Delta T(in - out), " + temperatureUnits : ""
+                ];
+                for (const header of headers){
+                    if (header === "") continue;
+                    const th = document.createElement("th");
+                    th.innerHTML = header;
+                    previewTableHead.appendChild(th);
+                }
+
                 previewTableBody.innerHTML = "";
                 for (const r of state.rows) {
                     const tr = document.createElement("tr");
+                    const rowColor = "black";
+                    if (r.fit && $("isColoredTable").checked){
+                        if (r.fit.flag === "Н")
+                            tr.style.color = "var(--red)";
+                        if (r.fit.flag === "Р")
+                            tr.style.color = "var(--blue)";
+                        if (r.fit.flag === "ТК")
+                            tr.style.color = "var(--orange)";
+                    }
                     tr.innerHTML = `
                     <td style="padding:6px;border-bottom:1px solid #eee;">${r.fit ? r.fit.id : ""}</td>
                     <td style="padding:6px;border-bottom:1px solid #eee;">${formatDateTime(r.t)}</td>
@@ -1673,11 +1762,14 @@
                     <td style="padding:6px;border-bottom:1px solid #eee;">${r.flag == null ? "" : r.flag}</td>
                     <td style="padding:6px;border-bottom:1px solid #eee;">${r.fit ? r.fit.C0.toFixed(1) : ""}</td>
                     <td style="padding:6px;border-bottom:1px solid #eee;">${r.fit ? r.fit.phi.toFixed(1) : ""}</td>
-                    <td style="padding:6px;border-bottom:1px solid #eee;">${r.fit ? r.fit.lambda.toExponential(3) : ""}</td>
-                    <td style="padding:6px;border-bottom:1px solid #eee;">${r.tempOut ? r.tempOut.toFixed(1) : ""}</td>
-                    <td style="padding:6px;border-bottom:1px solid #eee;">${r.tempIn ? r.tempIn.toFixed(1) : ""}</td>
-                    <td style="padding:6px;border-bottom:1px solid #eee;">${r.deltaTemp ? r.deltaTemp.toFixed(1) : ""}</td>
-                  `;
+                    <td style="padding:6px;border-bottom:1px solid #eee;">${r.fit ? (r.fit < 0.001 ? r.fit.lambda.toExponential(2) : r.fit.lambda.toFixed(3)) : ""}</td>
+                    `;
+                    if (state.hasTempOut)
+                        tr.innerHTML += `<td style="padding:6px;border-bottom:1px solid #eee;">${r.tempOut ? r.tempOut.toFixed(1) : ""}</td>`;
+                    if (state.hasTempIn)
+                        tr.innerHTML += `<td style="padding:6px;border-bottom:1px solid #eee;">${r.tempIn ? r.tempIn.toFixed(1) : ""}</td>`;
+                    if (state.hasDeltaTemp)
+                        tr.innerHTML += `<td style="padding:6px;border-bottom:1px solid #eee;">${r.deltaTemp ? r.deltaTemp.toFixed(1) : ""}</td>`;
                     previewTableBody.appendChild(tr);
                 }
             }
