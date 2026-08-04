@@ -294,9 +294,9 @@
                 2) нажмите кнопку с типом участка, который будет присвоен выбранному далее интервалу;<br>
                 3) зажав Ctrl и левую кнопку мыши, протяните курсор вправо, чтобы задать временному интервалу выбранный тип участка;<br>
                 4) выбранные участки будут автоматически аппроксимированы кривой, а её параметры выведены в таблицу ниже, либо появятся в подсказке при наведении курсора на участок;<br>
-                4) по окончании работы экспортируйте таблицу со всеми данными.
+                4) по окончании работы экспортируйте таблицу со всеми данными.<br><br>
+                <div>Описание приложения доступно по <a href="https://github.com/VSZ2020/RadonSeriesFitByFlag/blob/main/README.md">ссылке</a></div>
             </div>
-
             <div>
                 <div style="font-weight:600; margin-bottom:6px;">Вставьте временную серию ниже</div>
                 <textarea id="inputText" spellcheck="false" placeholder="Пример таблицы
@@ -361,11 +361,43 @@
             </section>
             <div class="mini-row" style="margin-top:10px;margin-bottom:10px;">
                 <span style="padding:10px;">Управление на графике</span>
-                <span class="pill">Ctrl + ЛКМ с выделением области - назначить флаг</span>
-                <span class="pill">Ctrl + ПКМ с выделением области - снять флаг</span>
-                <span class="pill">Колесо мыши - масштаб по X</span>
-                <span class="pill">Shift + Колесо - масштаб по Y</span>
-                <span class="pill">ЛКМ - панорамирование</span>
+                <div class="pill">Ctrl + 
+                    <svg xmlns="http://w3.org" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="5" y="2" width="14" height="20" rx="7" />
+                        <path d="M12 2v6" />
+                        <path d="M5 8h7" fill="currentColor" fill-opacity="0.2" />
+                    </svg> 
+                    и протянуть влево или вправо - назначить тип участка
+                </div>
+                <div class="pill">Ctrl + 
+                    <svg xmlns="http://w3.org" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="5" y="2" width="14" height="20" rx="7" />
+                        <path d="M12 2v6" />
+                        <path d="M12 8h7" fill="currentColor" fill-opacity="0.2" />
+                    </svg> 
+                    с выделением области - очистить назначение типа</div>
+                <div class="pill">Shift + 
+                    <svg xmlns="http://w3.org" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="5" y="2" width="14" height="20" rx="7" />
+                        <path d="M12 6v4" stroke-width="3" /><path d="M9 13h6" opacity="0.4" />
+                        <path d="M9 16h6" opacity="0.2" />
+                    </svg>
+                 - масштаб по X</div>
+                <div class="pill">Ctrl + 
+                    <svg xmlns="http://w3.org" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="5" y="2" width="14" height="20" rx="7" />
+                        <path d="M12 6v4" stroke-width="3" /><path d="M9 13h6" opacity="0.4" />
+                        <path d="M9 16h6" opacity="0.2" />
+                    </svg>
+                    - масштаб по Y</div>
+                <div class="pill">
+                    <svg xmlns="http://w3.org" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="5" y="2" width="14" height="20" rx="7" />
+                        <path d="M12 2v6" />
+                        <path d="M5 8h7" fill="currentColor" fill-opacity="0.2" />
+                    </svg>
+                    и перемещение курсора - панорамирование
+                </div>
             </div>
         </section>
         <section class="card" style="padding:12px;">
@@ -408,7 +440,7 @@
                 </div>
             </section>
     </div>
-    <div class="footer">
+    <div class="footer">          
             <div>Developed by Izgagin V. S., 2026</div>
         </div>
     <script>
@@ -1966,11 +1998,12 @@
 
             canvas.addEventListener("wheel", ev => {
                 if (!state.rows.length) return;
-                ev.preventDefault();
+                
                 const p = canvasPos(ev);
                 const factor = ev.deltaY < 0 ? 0.9 : 1.1;
 
-                if (ev.shiftKey) {
+                if (ev.ctrlKey) {
+                    ev.preventDefault();
                     // Zoom Y (левая шкала)
                     const yAtCursor = pxToY(p.y);
                     const rangeY = state.viewMaxY - state.viewMinY;
@@ -1986,27 +2019,30 @@
                     return;
                 }
 
-                // Zoom X
-                const xAtCursor = pxToX(p.x);
-                const rangeX = state.viewMaxX - state.viewMinX;
-                let newRangeX = rangeX * factor;
-                const fullRangeX = state.dataMaxX - state.dataMinX || 1;
-                const minRangeX = Math.max(60000, fullRangeX * 0.0005);
-                const maxRangeX = fullRangeX * 50;
-                newRangeX = Math.max(minRangeX, Math.min(maxRangeX, newRangeX));
-                const leftFrac = (xAtCursor - state.viewMinX) / rangeX;
-                state.viewMinX = xAtCursor - leftFrac * newRangeX;
-                state.viewMaxX = state.viewMinX + newRangeX;
-
-                if (state.viewMinX < state.dataMinX - fullRangeX * 0.05) {
-                    state.viewMinX = state.dataMinX - fullRangeX * 0.05;
+                if (ev.shiftKey) {
+                    ev.preventDefault();
+                    // Zoom X
+                    const xAtCursor = pxToX(p.x);
+                    const rangeX = state.viewMaxX - state.viewMinX;
+                    let newRangeX = rangeX * factor;
+                    const fullRangeX = state.dataMaxX - state.dataMinX || 1;
+                    const minRangeX = Math.max(60000, fullRangeX * 0.0005);
+                    const maxRangeX = fullRangeX * 50;
+                    newRangeX = Math.max(minRangeX, Math.min(maxRangeX, newRangeX));
+                    const leftFrac = (xAtCursor - state.viewMinX) / rangeX;
+                    state.viewMinX = xAtCursor - leftFrac * newRangeX;
                     state.viewMaxX = state.viewMinX + newRangeX;
+
+                    if (state.viewMinX < state.dataMinX - fullRangeX * 0.05) {
+                        state.viewMinX = state.dataMinX - fullRangeX * 0.05;
+                        state.viewMaxX = state.viewMinX + newRangeX;
+                    }
+                    if (state.viewMaxX > state.dataMaxX + fullRangeX * 0.05) {
+                        state.viewMaxX = state.dataMaxX + fullRangeX * 0.05;
+                        state.viewMinX = state.viewMaxX - newRangeX;
+                    }
+                    render();
                 }
-                if (state.viewMaxX > state.dataMaxX + fullRangeX * 0.05) {
-                    state.viewMaxX = state.dataMaxX + fullRangeX * 0.05;
-                    state.viewMinX = state.viewMaxX - newRangeX;
-                }
-                render();
             }, { passive: false });
 
             document.addEventListener("keydown", ev => {
