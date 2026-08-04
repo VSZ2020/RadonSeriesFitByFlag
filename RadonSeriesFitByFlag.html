@@ -13,6 +13,7 @@
             --text: #111827;
             --muted: #6b7280;
             --blue: #2563eb;
+            --orange: #eb8f25;
             --blue-weak: #dbeafe;
             --red: #dc2626;
             --red-weak: #fee2e2;
@@ -88,6 +89,11 @@
             border-color: #1d4ed8;
         }
 
+        button.temp-fluctuations.active {
+            background: var(--orange);           
+            border-color: #ad4204;
+        }
+
         button.secondary.active {
             background: #4b5563;
             border-color: #374151;
@@ -157,7 +163,7 @@
             border: 1px solid var(--border);
             border-radius: 10px;
             padding: 10px 12px;
-            background: #e4ffe1;
+            background: #f7f7f7;
         }
 
         .help b {
@@ -279,7 +285,7 @@
                 3) удерживайте Ctrl и выделяйте интервал точек, которым нужно установить флаг;<br>
                 4) по окончании работы экспортируйте таблицу со всеми данными.
             </div>
-            
+
             <div>
                 <div style="font-weight:600; margin-bottom:6px;">Вставьте временную серию ниже</div>
                 <textarea id="inputText" spellcheck="false" placeholder="Пример таблицы
@@ -322,8 +328,9 @@
             <div class="mini-row" style="margin-bottom:10px;">
                 <div class="button-container">
                     <span style="padding:10px;">Выберите тип участка</span>
-                    <button id="flagAccBtn" class="accumulation">Накопление (флаг - 0)</button>
-                    <button id="flagVentBtn" class="ventilation">Разбавление (флаг - 1)</button>
+                    <button id="flagAccBtn" class="accumulation">Накопление (Н)</button>
+                    <button id="flagVentBtn" class="ventilation">Разбавление (Р)</button>
+                    <button id="flagTempFlucBtn" class="temp-fluctuations">Температурные колебания (ТК)</button>
                     <button id="noneBtn" class="secondary active">Не задан</button>
                     <span class="divider"></span>
                     <span style="padding:10px;">Масштаб</span>
@@ -406,7 +413,7 @@
                 // Для правой шкалы (температура)
                 tempMinY: 0,
                 tempMaxY: 1,
-                activeFlag: null, // null | 0 | 1
+                activeFlag: null, // null | Н | Р | ТК
                 dragging: false,
                 panning: false,
                 selecting: false,
@@ -442,16 +449,20 @@
 
             // ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
             function setActiveButton(btn) {
-                [$("flagAccBtn"), $("flagVentBtn"), $("noneBtn")].forEach(b => b.classList.remove("active"));
+                [$("flagAccBtn"), $("flagVentBtn"), $("flagTempFlucBtn"), $("noneBtn")].forEach(b => b.classList.remove("active"));
                 btn.classList.add("active");
             }
 
             $("flagAccBtn").addEventListener("click", () => { 
-                state.activeFlag = 0;
+                state.activeFlag = "Н";
                 setActiveButton($("flagAccBtn")); 
             });
-            $("flagVentBtn").addEventListener("click", () => { state.activeFlag = 1;
+            $("flagVentBtn").addEventListener("click", () => { state.activeFlag = "Р";
                 setActiveButton($("flagVentBtn")); });
+
+            $("flagTempFlucBtn").addEventListener("click", () => { state.activeFlag = "ТК";
+                setActiveButton($("flagTempFlucBtn")); });
+
             $("noneBtn").addEventListener("click", () => { state.activeFlag = null;
                 setActiveButton($("noneBtn")); });
 
@@ -597,8 +608,14 @@
                     let flagCol = null;
                     if (parts.length >= 3) {
                         const flagColText = parts[2];
-                        if (flagColText === "0" || flagColText === "1") {
-                            maybeFlag = Number(flagColText);
+                        if (flagColText === "0" || flagColText === "1" || flagColText === "Н" || flagColText === "Р" || flagColText === "ТК") {
+                            // Для совместимости со старыми версиями преобразуем числовой флаг 0 или 1 в символьный Н и Р
+                            if (flagColText === "0")
+                                maybeFlag = "Н";
+                            else if (flagColText === "1")
+                                maybeFlag = "Р";
+                            else 
+                                maybeFlag = flagColText;
                             flagCol = 2;
                         }
                     }
@@ -637,8 +654,15 @@
                                 t = dt2;
                                 y = val2;
                                 if (parts.length >= 4) {
-                                    const f = parseNumber(parts[3]);
-                                    if (f === 0 || f === 1) maybeFlag = f;
+                                    const f = parts[3];
+                                    if (f === "0" || f === "1" || f === "Н" || f === "Р" || f === "ТК") {
+                                        if (flagColText === "0")
+                                            maybeFlag = "Н";
+                                        else if (flagColText === "1")
+                                            maybeFlag === "Р";
+                                        else 
+                                            maybeFlag = f;
+                                    }
                                 }
                             }
                         }
@@ -656,6 +680,7 @@
                 }
 
                 rows.sort((a, b) => a.t - b.t);
+                console.log(rows);
                 return rows;
             }
 
@@ -665,7 +690,7 @@
                 state.rows = rows.map(r => ({
                     t: r.t,
                     y: r.y,
-                    flag: r.flag === 0 || r.flag === 1 ? r.flag : null,
+                    flag: r.flag === "Н" || r.flag === "Р" || r.flag === "ТК" ? r.flag : null,
                     tempOut: r.tempOut,
                     tempIn: r.tempIn,
                     deltaTemp: r.tempOut !== null && r.tempIn !== null ? r.tempIn - r.tempOut : null,
@@ -999,7 +1024,7 @@
                 state.fits = [];
                 const runs = segmentRuns();
                 for (const [i, run] of runs.entries()) {
-                    if (run.flag === 0 || run.flag === 1) {
+                    if (run.flag === "Н" || run.flag === "Р") {
                         const idxs = [];
                         for (let i = run.start; i < run.end; i++) idxs.push(i);
                         const fit = fitSegmentLM(idxs);
@@ -1018,7 +1043,7 @@
                 let changed = false;
                 for (const i of indices) {
                     if (i < 0 || i >= state.rows.length) continue;
-                    const next = flagValue === null ? null : (flagValue === 0 ? 0 : 1);
+                    const next = flagValue === null ? null : flagValue;
                     if (state.rows[i].flag !== next) {
                         state.rows[i].flag = next;
                         state.rows[i].fit = null;
@@ -1027,6 +1052,7 @@
                 }
                 if (changed) {
                     recomputeFits();
+                    updatePreviewTable();
                     render();
                 }
             }
@@ -1231,7 +1257,11 @@
                     }
                     if (idxs.length < 2) continue;
 
-                    ctx.strokeStyle = fit.flag === 0 ? "rgba(220,38,38,.75)" : "rgba(37,99,235,.75)";
+                    ctx.strokeStyle = "#1f2937";
+                    if (fit.flag === "Н") ctx.strokeStyle = "rgba(220,38,38,.75)";
+                    if (fit.flag === "Р") ctx.strokeStyle = "rgba(37,99,235,.75)";
+                    if (fit.flag === "ТК") ctx.strokeStyle = "rgba(255, 127, 14, 0.75)";
+
                     ctx.beginPath();
                     let started = false;
                     for (let k = 0; k < idxs.length; k++) {
@@ -1286,8 +1316,9 @@
                         const hovered = i === state.cursorIndex;
 
                         let fill = "#6b7280";
-                        if (r.flag === 0) fill = "#dc2626";
-                        if (r.flag === 1) fill = "#2563eb";
+                        if (r.flag === "Н") fill = "#dc2626";
+                        if (r.flag === "Р") fill = "#2563eb";
+                        if (r.flag === "ТК") fill = "#ff7f0e";
 
                         const radius = hovered ? 3.5 : 2.8;
                         ctx.beginPath();
@@ -1602,7 +1633,7 @@
                         r.fit ? r.fit.id : "",
                         formatDateTime(r.t),
                         String(r.y),
-                        String(r.flag == null ? "" : r.flag),
+                        r.flag == null ? "" : r.flag,
                         r.fit ? r.fit.C0 : "",
                         r.fit ? r.fit.phi : "",
                         r.fit ? r.fit.lambda : "",
@@ -1617,7 +1648,7 @@
             function updatePreviewTable() {
                 if (!previewTableBody) return;
                 previewTableBody.innerHTML = "";
-                for (const r of state.rows.slice(0, 500)) {
+                for (const r of state.rows) {
                     const tr = document.createElement("tr");
                     tr.innerHTML = `
                     <td style="padding:6px;border-bottom:1px solid #eee;">${r.fit ? r.fit.id : ""}</td>
@@ -1873,7 +1904,6 @@
             // Инициализация
             resizeCanvas();
             drawEmptyState();
-            updateSummary();
         })();
     </script>
 </body>
