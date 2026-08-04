@@ -1701,13 +1701,17 @@
             }
 
             function buildExportText(delim) {
-                const header = [`№ участка`, `Дата и время`, `ОА радона, ${radonUnits}`, `Тип участка`,
-                    `C0, ${radonUnits}`, `Phi, ${phiUnits}`, `Lambda, ${lambdaUnits}`, `T outdoor, ${temperatureUnits}`, `T indoor, ${temperatureUnits}`, 'Delta T, ${temperatureUnits}'
+                const header = [
+                    "№ участка", "Дата и время", `ОА радона, ${radonUnits}`, "Тип участка",
+                    `C0, ${radonUnits}`, `φ, ${phiUnits}`, `λ, ${lambdaUnits}`, 
+                    `T outdoor, ${temperatureUnits}`, `T indoor, ${temperatureUnits}`, `Delta T, ${temperatureUnits}`
                 ].join(delim);
                 const lines = [
                     "# Результаты обработки временной серии ОА радона",
                     "# Типы участков: Р - разбавление, Н - накопление, ТК - температурные колебания",
-                    "# Единицы измерения C0 - Бк/м3, Phi - Бк/м3/с или Бк/м3/ч (зависит от шага серии), Lambda - 1/с или 1/ч (зависит от шага серии)",
+                    "# Обозначения: φ - скорость поступления ОА радона, λ - кратность воздухообмена",
+                    `# Ограничения параметров аппроксимации: λ [${minLambda}, ${maxLambda}], φ [${minPhi}, ${maxPhi}]`,
+                    "# Единицы измерения: C0 - Бк/м3, φ - Бк/м3/мин или Бк/м3/ч (зависит от шага серии), λ - 1/мин или 1/ч (зависит от шага серии)",
                     header
                 ];
                 for (const r of state.rows) {
