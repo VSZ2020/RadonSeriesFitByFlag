@@ -33,11 +33,9 @@
             color: var(--text);
         }
 
-        header {
-            background: var(--panel);
-            border-bottom: 1px solid var(--border);
-            box-shadow: 0 1px 2px rgba(0, 0, 0, .05);
-            padding: 14px 16px 12px;
+        header h1 {
+            font-size: 2em;
+            padding: 14px 16px 0px;
         }
 
         h1 {
@@ -254,6 +252,13 @@
             background-color: #ccc;
         }
 
+        .footer {
+                font-size: 12px;
+                font-style: italic;
+                color: lightgray;
+                text-align: center;
+            }
+
         @media (max-width: 980px) {
             .layout {
                 grid-template-columns: 1fr;
@@ -280,9 +285,10 @@
         <section class="left card">
             <div class="help">
                 <b>💡 Как работать:</b><br>
-                1) загрузите временную серию в поле для ввода и нажмите «Загрузить из поля для ввода»;<br>
-                2) выберите режим «Флаг 1», «Флаг 0»;<br>
-                3) удерживайте Ctrl и выделяйте интервал точек, которым нужно установить флаг;<br>
+                1) вставьте временную серию в указанном формате в поле для ввода и нажмите «Загрузить серию из поля для ввода»;<br>
+                2) нажмите кнопку с типом участка, который будет присвоен выбранному далее интервалу;<br>
+                3) зажав Ctrl и левую кнопку мыши, протяните курсор вправо, чтобы задать временному интервалу выбранный тип участка;<br>
+                4) выбранные участки будут автоматически аппроксимированы кривой, а её параметры выведены в таблицу ниже, либо появятся в подсказке при наведении курсора на участок;<br>
                 4) по окончании работы экспортируйте таблицу со всеми данными.
             </div>
 
@@ -362,6 +368,13 @@
                     <button id="exportCsvBtn" class="csv">Экспорт в .csv</button>
                     <button id="exportTxtBtn">Экспорт в .txt</button>
                     <button id="copyBtn">Копировать в буфер обмена</button>
+
+                    <span>Формат даты при экспорте</span>
+                    <input type="radio" id="radioBtnEnFormat" name="format" checked/>
+                    <label for="radioBtnEnFormat">yyyy-mm-dd HH:MM:SS</label>
+
+                    <input type="radio" id="radioBtnRuFormat" name="format"/>
+                    <label for="radioBtnRuFormat">dd.mm.yyyy HH:MM:SS</label>
                 </div>
             </div>
                 <div style="overflow:auto; max-height:360px; border:1px solid var(--border); border-radius:10px;">
@@ -385,7 +398,9 @@
                 </div>
             </section>
     </div>
-
+    <div class="footer">
+            <div>Developed by Izgagin V. S., 2026</div>
+        </div>
     <script>
         (() => {
             const $ = id => document.getElementById(id);
@@ -580,7 +595,8 @@
 
             function formatDateTime(ms) {
                 const d = new Date(ms);
-                const formatter = Intl.DateTimeFormat([], {
+                const locale = $("radioBtnEnFormat").checked ? "sv-SE" : "ru-RU";
+                const formatter = Intl.DateTimeFormat(locale, {
                     year: "numeric",
                     month: "2-digit",
                     day: "2-digit",
