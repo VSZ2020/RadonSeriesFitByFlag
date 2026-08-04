@@ -97,11 +97,6 @@
             border-color: #374151;
         }
 
-        button.csv {
-            background: #16a34a;
-            color: white;
-        }
-
         .pill {
             display: inline-flex;
             align-items: center;
@@ -309,7 +304,7 @@
 Здесь [TAB] - разделитель между колонками - табуляция. При копировании таблицы из Excel значения уже разделены табуляцией.
 Формат даты и времени зависит от установленных в вашей системе региональных стандартов."></textarea>
                 <div class="small-note" style="margin-top:0px;margin-bottom:6px;">
-                    Поддерживаются разделители: табуляция, запятая и точка с запятой. Если есть третья колонка, она может содержать флаг проветривания - 0 или 1.
+                    Поддерживаются разделители: табуляция, запятая и точка с запятой. Если есть третья колонка, она может содержать тип проветривания - Н, Р или КТ (либо устаревшие типы 0 или 1).
                 </div>
                 <div class="toolbar">
                     <button id="loadTextBtn">Загрузить серию из поля ввода</button>
@@ -335,7 +330,7 @@
             <span>Макс. φ</span>
             <input type="number" placeholder="1000.0" value="1000.0" id="phiMax" class="constraint-input">
             <button id="applyConstraintsBtn">Применить</button>
-            <div style="color:var(--muted);font-size: smaller;">💡Подсказка: по-умолчанию единицы измерения Phi и Lambda соответствуют единицам ОА радона и шагу по времени загруженной серии</div>
+            <div style="color:var(--muted);font-size: smaller;">💡Подсказка: по-умолчанию единицы измерения φ и λ соответствуют единицам ОА радона и шагу по времени загруженной серии</div>
         </div>
 
         <section class="card" style="padding:10px; margin-top:0px;">
@@ -412,7 +407,7 @@
                     <input type="radio" id="radioBtnRuFormat" name="format"/>
                     <label for="radioBtnRuFormat">dd.mm.yyyy HH:MM:SS</label>
 
-                    <button id="exportCsvBtn" class="csv">Экспорт в .csv</button>
+                    <button id="exportCsvBtn">Экспорт в .csv</button>
                     <button id="exportTxtBtn">Экспорт в .txt</button>
                     <button id="copyBtn">Копировать в буфер обмена</button>
 
@@ -1621,13 +1616,13 @@
                     `X: ${formatDateTime(r.t)}`,
                     `ОА радона: ${r.y.toFixed(1)}`
                 ];
-                if (r.tempOut !== null && isFinite(r.tempOut)) {
+                if (r.tempOut !== null && isFinite(r.tempOut) && state.showTempOut) {
                     tooltipLines.push(`T outdoor: ${r.tempOut.toFixed(1)} °C`);
                 }
-                if (r.tempIn !== null && isFinite(r.tempIn)) {
+                if (r.tempIn !== null && isFinite(r.tempIn) && state.showTempIn) {
                     tooltipLines.push(`T indoor: ${r.tempIn.toFixed(1)} °C`);
                 }
-                if (r.deltaTemp !== null && isFinite(r.deltaTemp)) {
+                if (r.deltaTemp !== null && isFinite(r.deltaTemp) && state.showDeltaTemp) {
                     tooltipLines.push(`Delta T: ${r.deltaTemp.toFixed(1)} °C`);
                 }
                 
@@ -1636,7 +1631,7 @@
                     tooltipLines.push(`№ сегмента: ${r.fit.id}`);
                     tooltipLines.push(`C0: ${r.fit.C0.toFixed(1)}`);
                     tooltipLines.push(`Phi: ${r.fit.phi.toFixed(1)}`);
-                    tooltipLines.push(`Lambda: ${r.fit.lambda.toFixed(10)}`);
+                    tooltipLines.push(`Lambda: ${r.fit.lambda < 0.01 ? r.fit.lambda.toExponential(3) : r.fit.lambda.toFixed(3)}`);
                 }
 
                 const padX = 8,
