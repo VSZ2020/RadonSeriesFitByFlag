@@ -318,21 +318,23 @@
                         Загрузить файл из файла CSV/TXT
                         <input id="fileInput" type="file" accept=".csv,.txt,.tsv,text/csv,text/plain" hidden />
                     </label>
+                    <button id="clearInputBtn">Очистить поле ввода</button>
                 </div>
             </div>
         </section>
 
         <div class="constraints-box">
             <span style="margin-bottom:6px; display: flex;"><b>🚧 Ограничители параметров аппроксимации</b></span>
-            <span>Мин. lambda</span>
+            <span>Мин. λ</span>
             <input type="number" placeholder="0.01" value="0.01" id="lambdaMin" class="constraint-input">
-            <span>Макс. lambda</span>
+            <span>Макс. λ</span>
             <input type="number" placeholder="2.0" value="2.0" id="lambdaMax" class="constraint-input">
-            <span>Мин. Phi</span>
+            <span>Мин. φ</span>
             <input type="number" placeholder="1.0" value="1.0" id="phiMin" class="constraint-input">
-            <span>Макс. Phi</span>
+            <span>Макс. φ</span>
             <input type="number" placeholder="1000.0" value="1000.0" id="phiMax" class="constraint-input">
             <button id="applyConstraintsBtn">Применить</button>
+            <div style="color:var(--muted);font-size: smaller;">💡Подсказка: по-умолчанию единицы измерения Phi и Lambda соответствуют единицам ОА радона и шагу по времени загруженной серии</div>
         </div>
 
         <section class="card" style="padding:10px; margin-top:0px;">
@@ -391,11 +393,11 @@
                             <tr>
                                 <th>№ участка</th>
                                 <th>Дата и время</th>
-                                <th>ОА радона</th>
+                                <th>ОА радона, Бк/м3</th>
                                 <th>Тип интервала</th>
-                                <th>C0</th>
-                                <th>Phi</th>
-                                <th>Lambda</th>
+                                <th>C0, Бк/м3</th>
+                                <th>φ, Бк/м3/ч</th>
+                                <th>λ, 1/ч</th>
                                 <th>T outdoor, °C</th>
                                 <th>T indoor, °C</th>
                                 <th>Delta T (In - Out), °C</th>
@@ -524,6 +526,10 @@
                 } catch (err) {
                     alert("Не удалось прочитать буфер обмена. Вставьте текст вручную в textarea." + err);
                 }
+            });
+
+            $("clearInputBtn").addEventListener("click", () => {
+                inputText.value = "";
             });
 
             $("applyConstraintsBtn").addEventListener("click", () => applyConstraints());
@@ -1730,8 +1736,8 @@
                     "ОА радона, " + radonUnits,
                     "Тип участка",
                     "C0, " + radonUnits,
-                    "Phi, " + phiUnits,
-                    "Lambda, " + lambdaUnits,
+                    "φ, " + phiUnits,
+                    "λ, " + lambdaUnits,
                     state.hasTempOut ? "T outdoor, " + temperatureUnits : "",
                     state.hasTempIn ? "T indoor, " + temperatureUnits : "",
                     state.hasDeltaTemp ? "Delta T(in - out), " + temperatureUnits : ""
