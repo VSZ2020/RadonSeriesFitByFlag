@@ -321,16 +321,32 @@
 
         <div class="constraints-box">
             <span style="margin-bottom:6px; display: flex;"><b>🚧 Ограничители параметров аппроксимации</b></span>
-            <span>Мин. λ</span>
-            <input type="number" placeholder="0.01" value="0.01" id="lambdaMin" class="constraint-input">
-            <span>Макс. λ</span>
-            <input type="number" placeholder="2.0" value="2.0" id="lambdaMax" class="constraint-input">
-            <span>Мин. φ</span>
-            <input type="number" placeholder="1.0" value="1.0" id="phiMin" class="constraint-input">
-            <span>Макс. φ</span>
-            <input type="number" placeholder="1000.0" value="1000.0" id="phiMax" class="constraint-input">
-            <button id="applyConstraintsBtn">Применить</button>
             <div style="color:var(--muted);font-size: smaller;">💡Подсказка: по-умолчанию единицы измерения φ и λ соответствуют единицам ОА радона и шагу по времени загруженной серии</div>
+            <div class="card" style="padding: 8px;">
+                <div style="margin-bottom: 5px;">Для участков <span style="color:var(--red);">накопления</span></div>
+                <span>Мин. λ</span>
+                <input type="number" placeholder="0,01" value="0.01" id="lambdaMin" class="constraint-input">
+                <span>Макс. λ</span>
+                <input type="number" placeholder="1,5" value="1.5" id="lambdaMax" class="constraint-input">
+                <span>Мин. φ</span>
+                <input type="number" placeholder="1,0" value="1.0" id="phiMin" class="constraint-input">
+                <span>Макс. φ</span>
+                <input type="number" placeholder="500" value="500" id="phiMax" class="constraint-input">
+            </div>
+            
+            <div class="card" style="margin-top: 5px; padding: 8px; margin-bottom: 5px;">
+                <div style="margin-bottom: 3px;">Для участков <span style="color:var(--blue);">разбавления</span></div>
+                <span>Мин. λ</span>
+                <input type="number" placeholder="0,01" value="0.01" id="lambdaMinDilution" class="constraint-input">
+                <span>Макс. λ</span>
+                <input type="number" placeholder="1,5" value="1.5" id="lambdaMaxDilution" class="constraint-input">
+                <span>Мин. φ</span>
+                <input type="number" placeholder="1,0" value="1.0" id="phiMinDilution" class="constraint-input">
+                <span>Макс. φ</span>
+                <input type="number" placeholder="500" value="500" id="phiMaxDilution" class="constraint-input" min="1">
+            </div>
+            <button id="applyConstraintsBtn">Применить ограничители</button>
+            
         </div>
 
         <section class="card" style="padding:10px; margin-top:0px;">
@@ -496,10 +512,15 @@
             // ========== ПАРАМЕТРЫ МОДЕЛИ ==========
             const MODEL_EPS = 1e-12;
             const PX_THRESH = 9;
-            let minLambda = 1e-10;
+            let minLambda = 0.01;
             let maxLambda = 2.0;
             let minPhi = 1.0;
-            let maxPhi = 2000.0;
+            let maxPhi = 1000.0;
+
+            let minLambdaDilution = 0.01;
+            let maxLambdaDilution = 2.0;
+            let minPhiDilution = 1.0;
+            let maxPhiDilution = 1000.0;
 
             // ========== ЕДИНИЦЫ ИЗМЕРЕНИЯ ==========
             let radonUnits = "Бк/м3";
@@ -787,9 +808,10 @@
                 state.showDeltaTemp = true;
 
                 resetView();
-                recomputeFits();
-                updatePreviewTable();
-                render();
+                applyConstraints();
+                // recomputeFits();
+                // updatePreviewTable();
+                // render();
             }
 
             // ========== ОГРАНИЧИТЕЛИ ==========
@@ -798,6 +820,11 @@
                 const maxLambdaStr = $("lambdaMax").value;
                 const minPhiStr = $("phiMin").value;
                 const maxPhiStr = $("phiMax").value;
+
+                const minLambdaDilutionStr = $("lambdaMinDilution").value;
+                const maxLambdaDilutionStr = $("lambdaMaxDilution").value;
+                const minPhiDilutionStr = $("phiMinDilution").value;
+                const maxPhiDilutionStr = $("phiMaxDilution").value;
 
                 if (!Number.isFinite(Number(minLambdaStr)) || minLambdaStr === '') {
                     alert("Неверное число в поле для Lambda min");
@@ -823,11 +850,17 @@
                     alert("Минимальное значение Phi не может быть больше максимального");
                     return;
                 }
-
-                minLambda = parseFloat(minLambdaStr) ?? 1e-10;
+                // Для участков накопления
+                minLambda = parseFloat(minLambdaStr) ?? 0.01;
                 maxLambda = parseFloat(maxLambdaStr) ?? 2.0;
                 minPhi = parseFloat(minPhiStr) ?? 1;
-                maxPhi = parseFloat(maxPhiStr) ?? 2000.0;
+                maxPhi = parseFloat(maxPhiStr) ?? 1000.0;
+
+                // Для участков разбавления
+                minLambdaDilution = parseFloat(minLambdaDilutionStr) ?? 0.01;
+                maxLambdaDilution = parseFloat(maxLambdaDilutionStr) ?? 2.0;
+                minPhiDilution = parseFloat(minPhiDilutionStr) ?? 1;
+                maxPhiDilution = parseFloat(maxPhiDilutionStr) ?? 1000.0;
 
                 recomputeFits();
                 updatePreviewTable();
@@ -1013,7 +1046,7 @@
                 return C0 * Math.exp(-lambda * tHours) + (phi / lambda) * (1 - Math.exp(-lambda * tHours));
             }
 
-            function fitSegmentLM(indices) {
+            function fitSegmentLM(indices, min_phi, max_phi, min_lambda, max_lambda) {
                 const pts = indices.map(i => state.rows[i]).filter(p => isFinite(p.t) && isFinite(p.y));
                 if (pts.length < 3) return null;
 
@@ -1022,8 +1055,8 @@
                 const ys = pts.map(p => p.y);
                 const C0 = ys[0];
 
-                let lambda = minLambda;
-                let phi = Math.max(minPhi, Math.min(maxPhi, ys[Math.max(ys.length - 1, 0)] * lambda));
+                let lambda = min_lambda;
+                let phi = Math.max(min_phi, Math.min(max_phi, ys[Math.max(ys.length - 1, 0)] * lambda));
                 let mu = 1e-3;
                 let bestErr = Infinity;
                 let best = { lambda, phi };
@@ -1077,8 +1110,8 @@
 
                     let candLambda = lambda + dLambda;
                     let candPhi = phi + dPhi;
-                    candLambda = Math.max(minLambda, Math.min(maxLambda, candLambda));
-                    candPhi = Math.max(minPhi, Math.min(maxPhi, candPhi));
+                    candLambda = Math.max(min_lambda, Math.min(max_lambda, candLambda));
+                    candPhi = Math.max(min_phi, Math.min(max_phi, candPhi));
 
                     const err = sse(candLambda, candPhi);
                     if (err < bestErr) {
@@ -1104,8 +1137,15 @@
                 for (const [i, run] of runs.entries()) {
                     if (run.flag === "Н" || run.flag === "Р") {
                         const idxs = [];
+                        const isBuildup = run.flag === "Н";
                         for (let i = run.start; i < run.end; i++) idxs.push(i);
-                        const fit = fitSegmentLM(idxs);
+                        const fit = fitSegmentLM(
+                            idxs,
+                            isBuildup ? minPhi : minPhiDilution,
+                            isBuildup ? maxPhi : maxPhiDilution,
+                            isBuildup ? minLambda : minLambdaDilution,
+                            isBuildup ? maxLambda : maxLambdaDilution
+                        );
                         if (fit) {
                             fit.flag = run.flag;
                             fit.id = ++segmentsCounter;
@@ -1711,7 +1751,7 @@
                     "# Результаты обработки временной серии ОА радона",
                     "# Типы участков: Р - разбавление, Н - накопление, ТК - температурные колебания",
                     "# Обозначения: φ - скорость поступления ОА радона, λ - кратность воздухообмена",
-                    `# Ограничения параметров аппроксимации: λ [${minLambda}, ${maxLambda}], φ [${minPhi}, ${maxPhi}]`,
+                    `# Ограничения параметров аппроксимации: для накопления λ [${minLambda}, ${maxLambda}], φ [${minPhi}, ${maxPhi}]; для разбавления λ [${minLambdaDilution}, ${maxLambdaDilution}], φ [${minPhiDilution}, ${maxPhiDilution}]`,
                     "# Единицы измерения: C0 - Бк/м3, φ - Бк/м3/мин или Бк/м3/ч (зависит от шага серии), λ - 1/мин или 1/ч (зависит от шага серии)",
                     header
                 ];
