@@ -626,7 +626,6 @@
                     hh = Number(m[4]) || 0,
                     mm = Number(m[5]) || 0,
                     ss = Number(m[6]) || 0;
-                    console.log("Match date in format dd.mm.yyyy: " + `${da}.${mo+1}.${y}`);
                     const d = new Date(y, mo, da, hh, mm, ss);
                     if (!isNaN(d.getTime())) return d.getTime();
                 }
@@ -638,7 +637,6 @@
                     hh = +(m[4] || 0),
                     mm = +(m[5] || 0),
                     ss = +(m[6] || 0);
-                    console.log("Match date in format yyyy-mm-dd: " + `${y}-${mo+1}-${da}`);
                     const d = new Date(y, mo, da, hh, mm, ss);
                     if (!isNaN(d.getTime())) return d.getTime();
                 }
@@ -759,7 +757,6 @@
                 }
 
                 rows.sort((a, b) => a.t - b.t);
-                console.log(rows);
                 return rows;
             }
 
