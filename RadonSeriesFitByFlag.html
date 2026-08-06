@@ -236,7 +236,8 @@
             white-space: normal !important;
             overflow-wrap: anywhere !important;
             word-break: break-word !important;
-            padding: 11px;
+            margin-left: 3px;
+            margin-bottom: 3px;
         }
 
         #loadTextBtn {
@@ -479,6 +480,7 @@
                     <button id="logYBtn">Log Y: OFF</button>
                     <button id="resetZoomBtn">Сброс масштаба</button>
                     <span class="divider"></span>
+                    <div class="legend-hint" style="color:var(--muted);font-size: small;">💡Нажатие на элемент в легенде графика показывает/скрывает серию</div>
                 </div>
             </div>
             <section class="right card">
@@ -527,7 +529,7 @@
                     и перемещение курсора - панорамирование
                 </div>
             </div>
-            <div class="legend-hint" style="color:var(--muted);font-size: smaller;">💡Подсказка: нажатие на элемент в легенде графика показывает/скрывает серию</div>
+            <div class="legend-hint" style="color:var(--muted);margin-left: 10px;">Примечание: в подсказке курсора указана ±SE для φ и λ, ±RMSE - для модели C(t)</div>
         </section>
         <section class="card" style="padding:12px;">
                 <div style="font-weight:600; margin-bottom:8px;">Предпросмотр данных</div>
@@ -554,10 +556,10 @@
                             <tr>
                                 <th>№ участка</th>
                                 <th>Дата и время</th>
-                                <th>ОА радона, Бк/м3</th>
+                                <th>ОА радона, Бк/м³</th>
                                 <th>Тип интервала</th>
-                                <th>C0, Бк/м3</th>
-                                <th>φ, Бк/м3/ч</th>
+                                <th>C0, Бк/м³</th>
+                                <th>φ, Бк/м³/ч</th>
                                 <th>λ, 1/ч</th>
                                 <th>T outdoor, °C</th>
                                 <th>T indoor, °C</th>
@@ -640,8 +642,8 @@
             let maxPhiDilution = 1000.0;
 
             // ========== ЕДИНИЦЫ ИЗМЕРЕНИЯ ==========
-            let radonUnits = "Бк/м3";
-            let phiUnits = "Бк/м3/ч";
+            let radonUnits = "Бк/м³";
+            let phiUnits = "Бк/м³/ч";
             let lambdaUnits = "1/ч";
             let temperatureUnits = "°С"
 
@@ -816,8 +818,8 @@
 
             function detectRadonUnits(rows){
                 const count = rows.length;
-                if (rows.filter((r) => r.y < 5.0).length > Math.floor(count / 2)) { return "кБк/м3"; }
-                else { return "Бк/м3"; }
+                if (rows.filter((r) => r.y < 5.0).length > Math.floor(count / 2)) { return "кБк/м³"; }
+                else { return "Бк/м³"; }
                     
             }
 
@@ -1270,8 +1272,57 @@
                     if (Math.abs(dLambda) < 1e-10 && Math.abs(dPhi) < 1e-10) break;
                 }
 
-                return { t0, lambda: best.lambda, phi: best.phi, C0, rmse: Math.sqrt(bestErr / times.length), start: indices[
-                        0], end: indices[indices.length - 1] + 1 };
+                // Оценка SE для Lambda и Phi
+                let j11 = 0, j12 = 0, j22 = 0;
+                const finalLambda = best.lambda;
+                const finalPhi = best.phi;
+
+                for (let k = 0; k < times.length; k++) {
+                    const t = times[k];
+                    const dl = Math.max(1e-6, Math.abs(finalLambda) * 1e-6);
+                    const dp = Math.max(1e-6, Math.abs(finalPhi) * 1e-6);
+
+                    const dYdLambda = (model(t, finalLambda + dl, finalPhi, C0) - 
+                                    model(t, Math.max(MODEL_EPS, finalLambda - dl), finalPhi, C0)) / (2 * dl);
+                    
+                    const dYdPhi = (model(t, finalLambda, finalPhi + dp, C0) - 
+                                    model(t, finalLambda, Math.max(0, finalPhi - dp), C0)) / (2 * dp);
+
+                    j11 += dYdLambda * dYdLambda;
+                    j12 += dYdLambda * dYdPhi;
+                    j22 += dYdPhi * dYdPhi;
+                }
+
+                // Оценка несмещенной дисперсии остатков (Degrees of Freedom = N - 2)
+                const dof = times.length - 2;
+                const sigma2 = dof > 0 ? bestErr / dof : 0;
+
+                // Обращение матрицы J^T * J
+                const det = j11 * j22 - j12 * j12;
+                let seLambda = NaN;
+                let sePhi = NaN;
+
+                if (isFinite(det) && Math.abs(det) > 1e-18 && dof > 0) {
+                    // Инвертированная матрица: inv(J^T * J) = (1/det) * [[j22, -j12], [-j12, j11]]
+                    const invJ11 = j22 / det;
+                    const invJ22 = j11 / det;
+
+                    // Диагональные элементы ковариационной матрицы * sigma^2
+                    seLambda = Math.sqrt(Math.max(0, sigma2 * invJ11));
+                    sePhi = Math.sqrt(Math.max(0, sigma2 * invJ22));
+                }
+
+                return { 
+                    t0, 
+                    lambda: best.lambda, 
+                    phi: best.phi, 
+                    C0,
+                    seLambda,
+                    sePhi, 
+                    rmse: Math.sqrt(bestErr / times.length), 
+                    start: indices[0], 
+                    end: indices[indices.length - 1] + 1 
+                };
             }
 
             function recomputeFits() {
@@ -1786,9 +1837,10 @@
                 if (r.fit) {
                     tooltipLines.push("");
                     tooltipLines.push(`№ сегмента: ${r.fit.id}`);
-                    tooltipLines.push(`C0: ${r.fit.C0.toFixed(1)}`);
-                    tooltipLines.push(`Phi: ${r.fit.phi.toFixed(1)}`);
-                    tooltipLines.push(`Lambda: ${r.fit.lambda < 0.01 ? r.fit.lambda.toExponential(3) : r.fit.lambda.toFixed(3)}`);
+                    tooltipLines.push(`C0: ${r.fit.C0.toFixed(1)} ${radonUnits}`);
+                    tooltipLines.push(`φ: (${r.fit.phi.toFixed(1)} ± ${r.fit.sePhi.toFixed(1)}) ${phiUnits}`);
+                    tooltipLines.push(`λ: (${r.fit.lambda < 0.01 ? r.fit.lambda.toExponential(2) : r.fit.lambda.toFixed(3)} ± ${r.fit.lambda < 0.01 ? r.fit.seLambda.toExponential(2) : r.fit.seLambda.toFixed(3)}) ${lambdaUnits}`);
+                    tooltipLines.push(`C(t): (${model(r.fit.t0, r.fit.lambda, r.fit.phi, r.fit.C0).toFixed(1)} ± ${r.fit.rmse.toFixed(1)}) ${radonUnits}`);
                 }
 
                 const padX = 8,
@@ -1799,11 +1851,21 @@
                 const boxH = tooltipLines.length * 18 + padY * 2;
                 const topPadding = 8;
 
-                let bx = x - boxW / 2;
-                bx = Math.max(M.l + 4, bx);
-                bx = Math.min(canvas.clientWidth - M.r - boxW - 4, bx);
+                const offset = 12; // Отступ подсказки от самого курсора
 
-                const by = M.t + topPadding;
+                // 1. Позиционируем справа от курсора
+                let bx = x + offset;
+                // По вертикали выравниваем относительно точки (например, чуть выше или посередине)
+                let by = y - boxH / 2; 
+
+                // 2. Если тултип вылезает за правый край — переносим его влево от курсора
+                if (bx + boxW > canvas.clientWidth - M.r - 4) {
+                    bx = x - boxW - offset;
+                }
+
+                // 3. Защита от вылета за левую, верхнюю и нижнюю границы Canvas
+                bx = Math.max(M.l + 4, bx);
+                by = Math.max(M.t + 4, Math.min(canvas.clientHeight - M.b - boxH - 4, by));
 
                 ctx.fillStyle = "rgba(17,24,39,.82)";
                 ctx.strokeStyle = "rgba(255,255,255,.15)";
@@ -1889,7 +1951,8 @@
                 const header = [
                     "№ участка", "Дата и время", `ОА радона, ${radonUnits}`, "Тип участка",
                     `C0, ${radonUnits}`, `φ, ${phiUnits}`, `λ, ${lambdaUnits}`, 
-                    `T outdoor, ${temperatureUnits}`, `T indoor, ${temperatureUnits}`, `Delta T, ${temperatureUnits}`
+                    `T outdoor, ${temperatureUnits}`, `T indoor, ${temperatureUnits}`, `Delta T, ${temperatureUnits}`,
+                    `±SE(φ), ${phiUnits}`,`±SE(λ), ${lambdaUnits}`, `±RMSE(C(t)), ${radonUnits}`
                 ].join(delim);
                 const lines = [
                     "# Результаты обработки временной серии ОА радона",
@@ -1911,6 +1974,9 @@
                         r.tempOut !== null && isFinite(r.tempOut) ? r.tempOut : "",
                         r.tempIn !== null && isFinite(r.tempIn) ? r.tempIn : "",
                         r.deltaTemp !== null && isFinite(r.deltaTemp) ? r.deltaTemp : "",
+                        r.fit ? r.fit.sePhi : "",
+                        r.fit ? r.fit.seLambda : "",
+                        r.fit ? r.fit.rmse : "",
                     ].join(delim));
                 }
                 return lines.join("\n");
@@ -1926,7 +1992,9 @@
                     "Тип участка",
                     "C0, " + radonUnits,
                     "φ, " + phiUnits,
+                    "±SE(φ), " + phiUnits,
                     "λ, " + lambdaUnits,
+                    "±SE(λ), " + lambdaUnits,
                     state.hasTempOut ? "T outdoor, " + temperatureUnits : "",
                     state.hasTempIn ? "T indoor, " + temperatureUnits : "",
                     state.hasDeltaTemp ? "Delta T(in - out), " + temperatureUnits : ""
@@ -1956,8 +2024,10 @@
                     <td style="padding:6px;border-bottom:1px solid #eee;">${r.y.toFixed(1)}</td>
                     <td style="padding:6px;border-bottom:1px solid #eee;">${r.flag == null ? "" : r.flag}</td>
                     <td style="padding:6px;border-bottom:1px solid #eee;">${r.fit ? r.fit.C0.toFixed(1) : ""}</td>
+                    <td style="padding:6px;border-bottom:1px solid #eee;">${r.fit ? r.fit.sePhi.toFixed(1) : ""}</td>
                     <td style="padding:6px;border-bottom:1px solid #eee;">${r.fit ? r.fit.phi.toFixed(1) : ""}</td>
                     <td style="padding:6px;border-bottom:1px solid #eee;">${r.fit ? (r.fit < 0.001 ? r.fit.lambda.toExponential(2) : r.fit.lambda.toFixed(3)) : ""}</td>
+                    <td style="padding:6px;border-bottom:1px solid #eee;">${r.fit ? (r.fit.lambda < 0.001 ? r.fit.seLambda.toExponential(2) : r.fit.seLambda.toFixed(3)) : ""}</td>
                     `;
                     if (state.hasTempOut)
                         tr.innerHTML += `<td style="padding:6px;border-bottom:1px solid #eee;">${r.tempOut ? r.tempOut.toFixed(1) : ""}</td>`;
