@@ -59,7 +59,7 @@
 
         button,
         .file-label {
-            border: 1px solid #c2c2c2;
+            border: 1px solid var(--border);
             background: #f8f8f8;
             color: #111827;
             padding: 8px 12px;
@@ -86,9 +86,10 @@
        
 
         .button-container {
-            display: flex;
-            align-items: center;
             gap: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
         }
 
         button.accumulation.active {
@@ -138,6 +139,13 @@
             width: 100%;
             height: 62vh;
             background: #fff;
+        }
+
+        .checkbox-group {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: #f8f8f8;
+            padding: 6px;
         }
 
         .constraints-box {
@@ -404,7 +412,7 @@
             </section>
             <section>
                 <div class="constraints-box left">
-                    <span class="section-title" style="margin-bottom: 0px !important;">🚧 Границы поиска оптимальных параметров аппроксимации</span>
+                    <span class="section-title">🚧 Границы поиска оптимальных параметров аппроксимации</span>
                     <div style="color:var(--muted);font-size: small;">Примечание: по-умолчанию единицы измерения φ и λ соответствуют единицам ОА радона и шагу по времени загруженной серии</div>
                     <div>
                         <div style="margin-bottom: 2px; font-weight: bold;">Для участков <span style="color:var(--red);">накопления</span></div>
@@ -532,24 +540,31 @@
             <div class="legend-hint" style="color:var(--muted);margin-left: 10px;">Примечание: в подсказке курсора указана ±SE для φ и λ, ±RMSE - для модели C(t)</div>
         </section>
         <section class="card" style="padding:12px;">
-                <div style="font-weight:600; margin-bottom:8px;">Предпросмотр данных</div>
-                <div class="mini-row" style="margin-bottom:10px;">
-                <div class="button-container">
-                    <span>Формат даты для экспорта и отображения</span>
-                    <input type="radio" id="radioBtnRuFormat" name="format" checked/>
-                    <label for="radioBtnRuFormat">dd.mm.yyyy HH:MM:SS</label>
+                <div class="section-title">Предпросмотр результатов</div>
+                <div class="button-container" style="margin-bottom:10px;">
+                    <div>
+                        <span>Формат даты для экспорта и отображения</span>
+                        <input type="radio" id="radioBtnRuFormat" name="format" checked/>
+                        <label for="radioBtnRuFormat">dd.mm.yyyy HH:MM:SS</label>
+                    </div>
                     
-                    <input type="radio" id="radioBtnEnFormat" name="format"/>
-                    <label for="radioBtnEnFormat">yyyy-mm-dd HH:MM:SS</label>
+                    <div>
+                        <input type="radio" id="radioBtnEnFormat" name="format"/>
+                        <label for="radioBtnEnFormat">yyyy-mm-dd HH:MM:SS</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="isColoredTable"/>
+                        <label for="isColoredTable">Цвет строки в цвет типа интервала</label>
+                    </div>
 
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="isShowOnlyIntervals"/>
+                        <label for="isShowOnlyIntervals">Показать только обработанные участки</label>
+                    </div>
                     <button id="exportCsvBtn">Экспорт в .csv</button>
                     <button id="exportTxtBtn">Экспорт в .txt</button>
                     <button id="copyBtn">Копировать в буфер обмена</button>
-
-                    <input type="checkbox" id="isColoredTable"/>
-                    <label for="isColoredTable">Цвет строки в цвет типа интервала</label>
                 </div>
-            </div>
                 <div style="overflow:auto; max-height:360px; border:1px solid var(--border); border-radius:10px;">
                     <table id="previewTable" style="width:100%; border-collapse:collapse; font-size:12px; text-align:center;">
                         <thead style="position:sticky; top:0; background:#f9fafb;">
@@ -564,6 +579,8 @@
                                 <th>T outdoor, °C</th>
                                 <th>T indoor, °C</th>
                                 <th>Delta T (In - Out), °C</th>
+                                <th>±SE(φ), Бк/м³/ч</th>
+                                <th>±SE(λ), 1/ч</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -746,6 +763,8 @@
             });
 
             $("isColoredTable").addEventListener("change", () => updatePreviewTable());
+
+            $("isShowOnlyIntervals").addEventListener("change", () => updatePreviewTable());
 
 
             function parseNumber(s) {
@@ -1984,6 +2003,8 @@
 
             function updatePreviewTable() {
                 if (!previewTableBody) return;
+                if (state.rows.length == 0) return;
+
                 previewTableHead.innerHTML = "";
                 const headers = [
                     "№ участка",
@@ -2007,7 +2028,10 @@
                 }
 
                 previewTableBody.innerHTML = "";
+                const showOnlyIntervals = $("isShowOnlyIntervals").checked;
                 for (const r of state.rows) {
+                    if (showOnlyIntervals && !r.fit) continue;
+
                     const tr = document.createElement("tr");
                     const rowColor = "black";
                     if (r.fit && $("isColoredTable").checked){
@@ -2027,7 +2051,7 @@
                     <td style="padding:6px;border-bottom:1px solid #eee;">${r.fit ? r.fit.sePhi.toFixed(1) : ""}</td>
                     <td style="padding:6px;border-bottom:1px solid #eee;">${r.fit ? r.fit.phi.toFixed(1) : ""}</td>
                     <td style="padding:6px;border-bottom:1px solid #eee;">${r.fit ? (r.fit < 0.001 ? r.fit.lambda.toExponential(2) : r.fit.lambda.toFixed(3)) : ""}</td>
-                    <td style="padding:6px;border-bottom:1px solid #eee;">${r.fit ? (r.fit.lambda < 0.001 ? r.fit.seLambda.toExponential(2) : r.fit.seLambda.toFixed(3)) : ""}</td>
+                    <td style="padding:6px;border-bottom:1px solid #eee;">${r.fit ? (r.fit.seLambda < 0.001 ? r.fit.seLambda.toExponential(2) : r.fit.seLambda.toFixed(3)) : ""}</td>
                     `;
                     if (state.hasTempOut)
                         tr.innerHTML += `<td style="padding:6px;border-bottom:1px solid #eee;">${r.tempOut ? r.tempOut.toFixed(1) : ""}</td>`;
