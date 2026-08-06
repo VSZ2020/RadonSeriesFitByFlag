@@ -43,12 +43,18 @@
             margin-top: 12px;
         }
 
+
         .autosearch-input {
             display: grid;
             grid-template-columns: 1.5fr 1fr 1fr;
             align-items: center;
             justify-content: space-between;
             gap: 8px;
+        }
+
+        .blur-content
+        {
+            filter: blur(4px);
         }
 
         button,
@@ -172,7 +178,7 @@
         .footer {
             font-size: 12px;
             font-style: italic;
-            color: lightgray;
+            color: rgb(185, 185, 185);
             text-align: center;
             padding-bottom: 10px;
         }
@@ -428,29 +434,32 @@
                         <button id="applyConstraintsBtn">Применить ограничители</button>
                     </div>
                 </div>
-                <div class="autosearch-box left">
-                    <span class="section-title">Автоматический поиск участков накопления и разбавления</span>
-                    <div class="autosearch-input">
-                        <label for="smoothWndInput">Окно сглаживания (кол-во значений)</label>
-                        <input type="range" id="smoothWndInput" min="2" max="24" value="5" step="1"
-                            oninput="document.getElementById('smoothWndVal').textContent=this.value">
-                        <span class="val" id="smoothWndVal">5</span>
+                <div class="position: relative;">
+                    <div class="autosearch-box left">
+                        <span class="section-title">Автоматический поиск участков накопления и разбавления</span>
+                        <div class="autosearch-input blur-content">
+                            <label for="smoothWndInput">Окно сглаживания (кол-во значений)</label>
+                            <input type="range" id="smoothWndInput" min="2" max="24" value="5" step="1"
+                                oninput="document.getElementById('smoothWndVal').textContent=this.value" disabled>
+                            <span class="val" id="smoothWndVal">5</span>
+                        </div>
+                        <div class="autosearch-input blur-content">
+                            <label for="minSegmLenInput">Минимальная длина сегмента (в ед. шага)</label>
+                            <input type="range" id="minSegmLenInput" min="2" max="24" value="3" step="1"
+                                oninput="document.getElementById('minSegmLenVal').textContent=this.value" disabled>
+                            <span class="val" id="minSegmLenVal">3</span>
+                        </div>
+                        <div class="autosearch-input blur-content">
+                            <label for="dropThrInput">Порог чувствительности (%/ч)</label>
+                            <input type="range" id="dropThrInput" min="1" max="30" value="10" step="1"
+                                oninput="document.getElementById('dropThrVal').textContent=this.value" disabled>
+                            <span class="val" id="dropThrVal">10</span>
+                        </div>
+                        <div class="autosearch-input blur-content">
+                            <button disabled>Начать поиск</button>
+                        </div>
                     </div>
-                    <div class="autosearch-input">
-                        <label for="minSegmLenInput">Минимальная длина сегмента (в ед. шага)</label>
-                        <input type="range" id="minSegmLenInput" min="2" max="24" value="3" step="1"
-                            oninput="document.getElementById('minSegmLenVal').textContent=this.value">
-                        <span class="val" id="minSegmLenVal">3</span>
-                    </div>
-                    <div class="autosearch-input">
-                        <label for="dropThrInput">Порог чувствительности (%/ч)</label>
-                        <input type="range" id="dropThrInput" min="1" max="30" value="10" step="1"
-                            oninput="document.getElementById('dropThrVal').textContent=this.value">
-                        <span class="val" id="dropThrVal">10</span>
-                    </div>
-                    <div class="autosearch-input">
-                        <button>Начать поиск</button>
-                    </div>
+                    <div style="inset: 0; display: flex;align-items: center;justify-content: center;z-index:2;">Будет реализовано. Скоро</div>
                 </div>
             </section>
         </div>
@@ -525,11 +534,11 @@
                 <div class="mini-row" style="margin-bottom:10px;">
                 <div class="button-container">
                     <span>Формат даты для экспорта и отображения</span>
-                    <input type="radio" id="radioBtnEnFormat" name="format" checked/>
-                    <label for="radioBtnEnFormat">yyyy-mm-dd HH:MM:SS</label>
-
-                    <input type="radio" id="radioBtnRuFormat" name="format"/>
+                    <input type="radio" id="radioBtnRuFormat" name="format" checked/>
                     <label for="radioBtnRuFormat">dd.mm.yyyy HH:MM:SS</label>
+                    
+                    <input type="radio" id="radioBtnEnFormat" name="format"/>
+                    <label for="radioBtnEnFormat">yyyy-mm-dd HH:MM:SS</label>
 
                     <button id="exportCsvBtn">Экспорт в .csv</button>
                     <button id="exportTxtBtn">Экспорт в .txt</button>
@@ -806,10 +815,10 @@
             }
 
             function detectRadonUnits(rows){
-                if (rows.filter((r) => r.y > 30).length > 0)
-                    return "Бк/м3";
-                else
-                    return "кБк/м3";
+                const count = rows.length;
+                if (rows.filter((r) => r.y < 5.0).length > Math.floor(count / 2)) { return "кБк/м3"; }
+                else { return "Бк/м3"; }
+                    
             }
 
             function getTimestepInMinues(rows){
@@ -829,18 +838,19 @@
                 const step = getTimestepInMinues(rows);
                 if (step > 0 && step < 60) 
                     {
-                        console.log('Detected time step in "min"');
                         return radonUnits + "/мин";
                     }
-                if (step > 60 && step < 60 * 24)
-                    return radonUnits + "/ч";
+                if (step >= 60 && step < 60 * 24)
+                    {
+                        return radonUnits + "/ч";
+                    }
             }
 
             function detectLambdaUnits(rows){
                 const step = getTimestepInMinues(rows);
                 if (step > 0 && step < 60) 
                     return "1/мин";
-                if (step > 60 && step < 60 * 24)
+                if (step >= 60 && step < 60 * 24)
                     return "1/ч";
             }
 
