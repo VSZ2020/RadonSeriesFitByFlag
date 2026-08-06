@@ -45,7 +45,7 @@
 
         .autosearch-input {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-columns: 1.5fr 1fr 1fr;
             align-items: center;
             justify-content: space-between;
             gap: 8px;
@@ -345,7 +345,7 @@
 
 <body>
     <header>
-        <h1>Radon Series Fit by Flag <span style="color:var(--muted);font-size: small;">v1.0.0</span></h1>
+        <h1>Radon Series Fit by Flag <span style="color:var(--muted);font-size: small;">v1.0.0b</span></h1>
     </header>
 
     <div class="layout">
@@ -366,7 +366,7 @@
         </section>
         <div class="top-grid">
             <section class="card left" style="height: 100%;">
-                <span class="section-title">Вставьте временную серию ниже</span>
+                <span class="section-title">Входные данные</span>
                 <textarea id="inputText" spellcheck="false" placeholder="Пример таблицы
 
 Дата и время       [TAB]ОА радона[TAB]Флаг[TAB]Т(outdoor)[TAB]Т(indoor)
@@ -377,8 +377,10 @@
 2026-04-20 12:00:00[TAB]123.4    [TAB]1   [TAB]12.4      [TAB]26.1
 2026-04-20 12:00:00[TAB]125.2    [TAB]1   [TAB]13.2      [TAB]26.2
 2026-04-20 12:00:00[TAB]130.7    [TAB]1   [TAB]15.6      [TAB]23.0
+
+Формат даты определяется автоматически.
 Здесь [TAB] - разделитель между колонками - табуляция. При копировании таблицы из Excel значения уже разделены табуляцией.
-Формат даты и времени зависит от установленных в вашей системе региональных стандартов."></textarea>
+"></textarea>
                 <div class="small-note" style="margin-top:0px;margin-bottom:6px;">
                     Поддерживаются разделители: табуляция, запятая и точка с запятой. Если есть третья колонка, она может содержать тип проветривания с одним из флагов (Н, Р или КТ).
                 </div>
@@ -429,13 +431,13 @@
                 <div class="autosearch-box left">
                     <span class="section-title">Автоматический поиск участков накопления и разбавления</span>
                     <div class="autosearch-input">
-                        <label for="smoothWndInput">Окно сглаживания</label>
+                        <label for="smoothWndInput">Окно сглаживания (кол-во значений)</label>
                         <input type="range" id="smoothWndInput" min="2" max="24" value="5" step="1"
                             oninput="document.getElementById('smoothWndVal').textContent=this.value">
                         <span class="val" id="smoothWndVal">5</span>
                     </div>
                     <div class="autosearch-input">
-                        <label for="minSegmLenInput">Минимальная длина сегмента (ед. шага)</label>
+                        <label for="minSegmLenInput">Минимальная длина сегмента (в ед. шага)</label>
                         <input type="range" id="minSegmLenInput" min="2" max="24" value="3" step="1"
                             oninput="document.getElementById('minSegmLenVal').textContent=this.value">
                         <span class="val" id="minSegmLenVal">3</span>
@@ -634,6 +636,8 @@
             let lambdaUnits = "1/ч";
             let temperatureUnits = "°С"
 
+            const dayOfWeekNames = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+
             // ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
             function setActiveButton(btn) {
                 [$("flagAccBtn"), $("flagVentBtn"), $("flagTempFlucBtn"), $("noneBtn")].forEach(b => b.classList.remove("active"));
@@ -794,6 +798,11 @@
                     hour12: false
                 });
                 return formatter.format(d).replace(',', '');
+            }
+
+            function getDayOfWeek(ms){
+                const d = new Date(ms);
+                return dayOfWeekNames[d.getDay()];
             }
 
             function detectRadonUnits(rows){
@@ -1746,17 +1755,17 @@
 
                 ctx.save();
                 const tooltipLines = [
-                    `X: ${formatDateTime(r.t)}`,
-                    `ОА радона: ${r.y.toFixed(1)}`
+                    `X: ${formatDateTime(r.t)} (${getDayOfWeek(r.t)})`,
+                    `Y: ${r.y.toFixed(1)} ${radonUnits}`
                 ];
                 if (r.tempOut !== null && isFinite(r.tempOut) && state.showTempOut) {
-                    tooltipLines.push(`T outdoor: ${r.tempOut.toFixed(1)} °C`);
+                    tooltipLines.push(`T outdoor: ${r.tempOut.toFixed(1)} ${temperatureUnits}`);
                 }
                 if (r.tempIn !== null && isFinite(r.tempIn) && state.showTempIn) {
-                    tooltipLines.push(`T indoor: ${r.tempIn.toFixed(1)} °C`);
+                    tooltipLines.push(`T indoor: ${r.tempIn.toFixed(1)} ${temperatureUnits}`);
                 }
                 if (r.deltaTemp !== null && isFinite(r.deltaTemp) && state.showDeltaTemp) {
-                    tooltipLines.push(`Delta T: ${r.deltaTemp.toFixed(1)} °C`);
+                    tooltipLines.push(`Delta T: ${r.deltaTemp.toFixed(1)} ${temperatureUnits}`);
                 }
                 
                 if (r.fit) {
