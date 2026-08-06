@@ -403,10 +403,6 @@
                     <button id="loadTextBtn">Загрузить серию из поля ввода</button>
                     или
                     <button id="pasteBtn">Вставить из буфера</button>
-                    <label class="file-label">
-                        Загрузить из файла CSV/TXT
-                        <input id="fileInput" type="file" accept=".csv,.txt,.tsv,text/csv,text/plain" hidden />
-                    </label>
                     <button id="clearInputBtn">Очистить поле ввода</button>
                 </div>
             </section>
@@ -596,7 +592,6 @@
             const $ = id => document.getElementById(id);
             const canvas = $("chart");
             const ctx = canvas.getContext("2d");
-            const fileInput = $("fileInput");
             const inputText = $("inputText");
             const fitText = $("fitText");
             const previewTableBody = document.querySelector("#previewTable tbody");
@@ -730,16 +725,6 @@
                     btn.textContent = tmpText;
                     btn.disabled = false;
                 }, 1000);
-            });
-
-            fileInput.addEventListener("change", async e => {
-                const file = e.target.files && e.target.files[0];
-                if (!file) return;
-                const txt = await file.text();
-                inputText.value = txt;
-                const rows = parseSeriesText(txt);
-                if (!rows.length) return alert("Не удалось прочитать файл.");
-                loadRows(rows);
             });
 
             $("exportCsvBtn").addEventListener("click", () => exportData(",", "csv"));
