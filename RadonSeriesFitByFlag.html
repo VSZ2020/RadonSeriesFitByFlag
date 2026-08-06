@@ -807,15 +807,15 @@
 
             function detectRadonUnits(rows){
                 if (rows.filter((r) => r.y > 30).length > 0)
-                    radonUnits = "Бк/м3";
+                    return "Бк/м3";
                 else
-                    radonUnits = "кБк/м3";
+                    return "кБк/м3";
             }
 
             function getTimestepInMinues(rows){
                 if (rows.length < 2) return 60;
                 let minDiff = Infinity; // minues
-                const timestamps = rows.map(r => r.t.getTime());
+                const timestamps = rows.map(r => r.t);
                 const sortedTimestamps = [...timestamps].sort((a, b) => a - b);
 
                 for (let i = 1; i < sortedTimestamps.length; i++) {
@@ -828,7 +828,10 @@
             function detectPhiUnits(rows){
                 const step = getTimestepInMinues(rows);
                 if (step > 0 && step < 60) 
-                    return radonUnits + "/мин";
+                    {
+                        console.log('Detected time step in "min"');
+                        return radonUnits + "/мин";
+                    }
                 if (step > 60 && step < 60 * 24)
                     return radonUnits + "/ч";
             }
@@ -920,7 +923,9 @@
                     fit: null,
                 }));
 
-                detectRadonUnits(state.rows);
+                radonUnits = detectRadonUnits(state.rows);
+                phiUnits = detectPhiUnits(state.rows);
+                lambdaUnits = detectLambdaUnits(state.rows);
 
                 // Проверяем наличие температур
                 state.hasTempOut = state.rows.some(r => r.tempOut !== null && isFinite(r.tempOut));
