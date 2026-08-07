@@ -35,6 +35,11 @@
             font-size: 14px;
         }
 
+
+        .accumulation-marker {
+            color: var(--red);
+        }
+
         .autosearch-box {
             padding: 12px;
             border: 1px solid var(--border);
@@ -143,9 +148,8 @@
 
         .checkbox-group {
             border: 1px solid var(--border);
-            border-radius: 10px;
-            background: #f8f8f8;
-            padding: 6px;
+            border-radius: 8px;
+            padding: 6px 8px;
         }
 
         .constraints-box {
@@ -173,6 +177,10 @@
             margin-right: 10px;
         }
 
+        .dilution-marker {
+            color: var(--blue);
+        }
+
         .divider {
             width: 1px;
             height: 24px;
@@ -189,6 +197,24 @@
             color: rgb(185, 185, 185);
             text-align: center;
             padding-bottom: 10px;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 4px;
+            background: var(--bg-card);
+            padding: 6px 8px;
+            border-radius: 6px;
+        }
+
+        .grid-6 {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 4px;
+            background: var(--bg-card);
+            padding: 3px 6px;
+            border-radius: 6px;
         }
 
         header h1 {
@@ -220,6 +246,66 @@
 
         .help b {
             color: #111827;
+        }
+
+        .intervals-group-wrapper {
+            width: 400px;
+
+            display: flex;
+            flex-direction: column;
+
+            min-height: 0;
+            max-height: 90vh;
+            overflow: hidden;
+            padding: 12px;
+        }
+
+        .intervals-group {
+            gap: 6px;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            min-height: 0;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .intervals-group-date {
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .intervals-group-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .intervals-group-header-title {
+            font-weight: 700;
+            font-size: 15px;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .interval-card {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 6px 8px;
+        }
+
+        .interval-card.active {
+            border-color: #1d4ed8;
+        }
+
+        
+        .interval-card:hover {
+            cursor: pointer;
+            background-color: #eeeeee;
         }
 
         .left {
@@ -256,6 +342,45 @@
 
         #loadTextBtn:hover {
             background-color: #1d4ed8;
+        }
+
+        .metrics-group {
+            margin-bottom: 1px;
+        }
+
+        .metrics-group-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .metric-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .metric-label {
+            font-size: 10px;
+            color: var(--muted);
+        }
+
+        .metric-value {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text);
+            white-space: nowrap;
+        }
+
+        .middle-grid {
+            display: flex;
+            gap: 12px;                     
+            align-items: stretch;      
+        }
+
+        .middle-grid > section:first-child {
+            flex: 1;
         }
 
         .mini-row {
@@ -308,6 +433,24 @@
             font-weight: 600;
         }
 
+        .stats-block {
+            display: inline-flex;
+            gap: 6px;
+            margin-bottom: 6px;
+        }
+
+        .stats-item {
+            /* border: 1px solid var(--border); */
+            border-radius: 6px;
+            background-color: #f3f3f3;
+            padding: 4px 8px;
+        }
+
+        .stats-item.total {
+            color: #212529;
+            font-weight: 600;
+        }
+
         textarea {
             width: 100%;
             min-height: 220px;
@@ -339,6 +482,12 @@
             flex-wrap: wrap;
             gap: 8px;
             align-items: center;
+        }
+
+        .unit {
+            font-size: 10px;
+            font-weight: normal;
+            color: var(--muted);
         }
 
         @media (max-width: 980px) {
@@ -471,122 +620,137 @@
 
         
 
-        <section class="card" style="padding:10px; margin-top:0px;">
-            <div class="mini-row" style="margin-bottom:10px;">
-                <div class="button-container">
-                    <span style="padding:10px;">Выберите тип участка</span>
-                    <button id="noneBtn" class="secondary active">Не задан</button>
-                    <button id="flagAccBtn" class="accumulation">Накопление (Н)</button>
-                    <button id="flagVentBtn" class="ventilation">Разбавление (Р)</button>
-                    <button id="flagTempFlucBtn" class="temp-fluctuations">Температурные колебания (ТК)</button>
-                    <span class="divider"></span>
-                    <span style="padding:10px;">Масштаб</span>
-                    <button id="logYBtn">Log Y: OFF</button>
-                    <button id="resetZoomBtn">Сброс масштаба</button>
-                    <span class="divider"></span>
-                    <div class="legend-hint" style="color:var(--muted);font-size: small;">💡Нажатие на элемент в легенде графика показывает/скрывает серию</div>
+        <div class="middle-grid">
+            <section class="card" style="padding:10px; margin-top:0px;">
+                <div class="mini-row" style="margin-bottom:10px;">
+                    <div class="button-container">
+                        <span style="padding:10px;">Выберите тип участка</span>
+                        <button id="noneBtn" class="secondary active">Не задан</button>
+                        <button id="flagAccBtn" class="accumulation">Накопление (Н)</button>
+                        <button id="flagVentBtn" class="ventilation">Разбавление (Р)</button>
+                        <button id="flagTempFlucBtn" class="temp-fluctuations">Температурные колебания (ТК)</button>
+                        <span class="divider"></span>
+                        <span style="padding:10px;">Масштаб</span>
+                        <button id="logYBtn">Log Y: OFF</button>
+                        <button id="resetZoomBtn">Сброс масштаба</button>
+                        <span class="divider"></span>
+                        <div class="legend-hint" style="color:var(--muted);font-size: small;">💡Нажатие на элемент в легенде графика показывает/скрывает серию</div>
+                    </div>
                 </div>
-            </div>
-            <section class="right card">
-                <div class="canvas-wrap">
-                    <canvas id="chart"></canvas>
-                    <div class="overlay"></div>
+                <section class="right card">
+                    <div class="canvas-wrap">
+                        <canvas id="chart"></canvas>
+                        <div class="overlay"></div>
+                    </div>
+                </section>
+                <div class="mini-row" style="margin-top:10px;margin-bottom:10px;">
+                    <span style="padding:10px;">Управление на графике</span>
+                    <div class="pill">Ctrl + 
+                        <svg xmlns="http://w3.org" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="5" y="2" width="14" height="20" rx="7" />
+                            <path d="M12 2v6" />
+                            <path d="M5 8h7" fill="currentColor" fill-opacity="0.2" />
+                        </svg> 
+                        и протянуть влево или вправо - назначить тип участка
+                    </div>
+                    <div class="pill">Ctrl + 
+                        <svg xmlns="http://w3.org" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="5" y="2" width="14" height="20" rx="7" />
+                            <path d="M12 2v6" />
+                            <path d="M12 8h7" fill="currentColor" fill-opacity="0.2" />
+                        </svg> 
+                        с выделением области - очистить назначение типа</div>
+                    <div class="pill">Shift + 
+                        <svg xmlns="http://w3.org" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="5" y="2" width="14" height="20" rx="7" />
+                            <path d="M12 6v4" stroke-width="3" /><path d="M9 13h6" opacity="0.4" />
+                            <path d="M9 16h6" opacity="0.2" />
+                        </svg>
+                    - масштаб по X</div>
+                    <div class="pill">Ctrl + 
+                        <svg xmlns="http://w3.org" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="5" y="2" width="14" height="20" rx="7" />
+                            <path d="M12 6v4" stroke-width="3" /><path d="M9 13h6" opacity="0.4" />
+                            <path d="M9 16h6" opacity="0.2" />
+                        </svg>
+                        - масштаб по Y</div>
+                    <div class="pill">
+                        <svg xmlns="http://w3.org" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="5" y="2" width="14" height="20" rx="7" />
+                            <path d="M12 2v6" />
+                            <path d="M5 8h7" fill="currentColor" fill-opacity="0.2" />
+                        </svg>
+                        и перемещение курсора - панорамирование
+                    </div>
                 </div>
+                <div class="legend-hint" style="color:var(--muted);margin-left: 10px;">Примечание: в подсказке курсора указана ±SE для φ и λ, ±RMSE - для модели C(t)</div>
             </section>
-            <div class="mini-row" style="margin-top:10px;margin-bottom:10px;">
-                <span style="padding:10px;">Управление на графике</span>
-                <div class="pill">Ctrl + 
-                    <svg xmlns="http://w3.org" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="5" y="2" width="14" height="20" rx="7" />
-                        <path d="M12 2v6" />
-                        <path d="M5 8h7" fill="currentColor" fill-opacity="0.2" />
-                    </svg> 
-                    и протянуть влево или вправо - назначить тип участка
-                </div>
-                <div class="pill">Ctrl + 
-                    <svg xmlns="http://w3.org" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="5" y="2" width="14" height="20" rx="7" />
-                        <path d="M12 2v6" />
-                        <path d="M12 8h7" fill="currentColor" fill-opacity="0.2" />
-                    </svg> 
-                    с выделением области - очистить назначение типа</div>
-                <div class="pill">Shift + 
-                    <svg xmlns="http://w3.org" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="5" y="2" width="14" height="20" rx="7" />
-                        <path d="M12 6v4" stroke-width="3" /><path d="M9 13h6" opacity="0.4" />
-                        <path d="M9 16h6" opacity="0.2" />
-                    </svg>
-                 - масштаб по X</div>
-                <div class="pill">Ctrl + 
-                    <svg xmlns="http://w3.org" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="5" y="2" width="14" height="20" rx="7" />
-                        <path d="M12 6v4" stroke-width="3" /><path d="M9 13h6" opacity="0.4" />
-                        <path d="M9 16h6" opacity="0.2" />
-                    </svg>
-                    - масштаб по Y</div>
-                <div class="pill">
-                    <svg xmlns="http://w3.org" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="5" y="2" width="14" height="20" rx="7" />
-                        <path d="M12 2v6" />
-                        <path d="M5 8h7" fill="currentColor" fill-opacity="0.2" />
-                    </svg>
-                    и перемещение курсора - панорамирование
-                </div>
-            </div>
-            <div class="legend-hint" style="color:var(--muted);margin-left: 10px;">Примечание: в подсказке курсора указана ±SE для φ и λ, ±RMSE - для модели C(t)</div>
-        </section>
-        <section class="card" style="padding:12px;">
-                <div class="section-title">Предпросмотр результатов</div>
-                <div class="button-container" style="margin-bottom:10px;">
-                    <div>
-                        <span>Формат даты для экспорта и отображения</span>
-                        <input type="radio" id="radioBtnRuFormat" name="format" checked/>
-                        <label for="radioBtnRuFormat">dd.mm.yyyy HH:MM:SS</label>
-                    </div>
-                    
-                    <div>
-                        <input type="radio" id="radioBtnEnFormat" name="format"/>
-                        <label for="radioBtnEnFormat">yyyy-mm-dd HH:MM:SS</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="isColoredTable"/>
-                        <label for="isColoredTable">Цвет строки в цвет типа интервала</label>
-                    </div>
 
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="isShowOnlyIntervals"/>
-                        <label for="isShowOnlyIntervals">Показать только обработанные участки</label>
-                    </div>
-                    <button id="exportCsvBtn">Экспорт в .csv</button>
-                    <button id="exportTxtBtn">Экспорт в .txt</button>
-                    <button id="copyBtn">Копировать в буфер обмена</button>
+            <section class="card intervals-group-wrapper">
+                <div class="section-title">Перечень интервалов</div>
+                <div class="stats-block">
+                    <span class="stats-item total" id="statTotal">Всего 0</span>
+                    <div class="stats-item"><span class="accumulation-marker">● </span><span id="statAccumCount">Накоплений 0</span></div>
+                    <div class="stats-item"><span class="dilution-marker">● </span><span id="statDilutCount">Разбавлений 0</span></div>
                 </div>
-                <div style="overflow:auto; max-height:360px; border:1px solid var(--border); border-radius:10px;">
-                    <table id="previewTable" style="width:100%; border-collapse:collapse; font-size:12px; text-align:center;">
-                        <thead style="position:sticky; top:0; background:#f9fafb;">
-                            <tr>
-                                <th>№ участка</th>
-                                <th>Дата и время</th>
-                                <th>ОА радона, Бк/м³</th>
-                                <th>Тип интервала</th>
-                                <th>C0, Бк/м³</th>
-                                <th>φ, Бк/м³/ч</th>
-                                <th>λ, 1/ч</th>
-                                <th>T outdoor, °C</th>
-                                <th>T indoor, °C</th>
-                                <th>Delta T (In - Out), °C</th>
-                                <th>±SE(φ), Бк/м³/ч</th>
-                                <th>±SE(λ), 1/ч</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
+                <div class="intervals-group" id="intervalsList">
                 </div>
+                <div style="color:var(--muted);">Примечание: указана ±SE для φ и λ</div>
             </section>
+        
+        </div>
+        <section class="card" style="padding:12px;">
+            <div class="section-title">Предпросмотр результатов</div>
+            <div class="button-container" style="margin-bottom:10px;">
+                <div>
+                    <span>Формат даты для экспорта и отображения</span>
+                    <input type="radio" id="radioBtnRuFormat" name="format" checked/>
+                    <label for="radioBtnRuFormat">dd.mm.yyyy HH:MM:SS</label>
+                </div>
+                
+                <div>
+                    <input type="radio" id="radioBtnEnFormat" name="format"/>
+                    <label for="radioBtnEnFormat">yyyy-mm-dd HH:MM:SS</label>
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="isColoredTable"/>
+                    <label for="isColoredTable">Цвет строки в цвет типа интервала</label>
+                </div>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="isShowOnlyIntervals"/>
+                    <label for="isShowOnlyIntervals">Показать только обработанные участки</label>
+                </div>
+                <button id="exportCsvBtn">Экспорт в .csv</button>
+                <button id="exportTxtBtn">Экспорт в .txt</button>
+                <button id="copyBtn">Копировать в буфер обмена</button>
+            </div>
+            <div style="overflow:auto; max-height:360px; border:1px solid var(--border); border-radius:10px;">
+                <table id="previewTable" style="width:100%; border-collapse:collapse; font-size:12px; text-align:center;">
+                    <thead style="position:sticky; top:0; background:#f9fafb;">
+                        <tr>
+                            <th>№ участка</th>
+                            <th>Дата и время</th>
+                            <th>ОА радона, Бк/м³</th>
+                            <th>Тип интервала</th>
+                            <th>C0, Бк/м³</th>
+                            <th>φ, Бк/м³/ч</th>
+                            <th>λ, 1/ч</th>
+                            <th>T outdoor, °C</th>
+                            <th>T indoor, °C</th>
+                            <th>Delta T (In - Out), °C</th>
+                            <th>±SE(φ), Бк/м³/ч</th>
+                            <th>±SE(λ), 1/ч</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </section>
     </div>
     <div class="footer">          
-            <div>Developed by Izgagin V. S., 2026</div>
-        </div>
+        <div>Developed by Izgagin V. S., 2026</div>
+    </div>
     <script>
         (() => {
             const $ = id => document.getElementById(id);
@@ -815,6 +979,20 @@
                 return formatter.format(d).replace(',', '');
             }
 
+            function formatDateTimeShort(ms) {
+                const d = new Date(ms);
+                const locale = $("radioBtnEnFormat").checked ? "sv-SE" : "ru-RU";
+                const formatter = Intl.DateTimeFormat(locale, {
+                    year: "2-digit",
+                    month: "2-digit",
+                    day: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: false
+                });
+                return formatter.format(d).replace(',', '');
+            }
+
             function getDayOfWeek(ms){
                 const d = new Date(ms);
                 return dayOfWeekNames[d.getDay()];
@@ -840,24 +1018,23 @@
                 return minDiff;
             }
 
+            function detectTimeInterval(rows){
+                const stepInMinutes = getTimestepInMinues(rows);
+                if (stepInMinutes > 0 && stepInMinutes < 60)
+                    return "мин";
+                if (stepInMinutes >= 60 && stepInMinutes < 60*24)
+                    return "ч";
+                return "сут";
+            }
+
             function detectPhiUnits(rows){
-                const step = getTimestepInMinues(rows);
-                if (step > 0 && step < 60) 
-                    {
-                        return radonUnits + "/мин";
-                    }
-                if (step >= 60 && step < 60 * 24)
-                    {
-                        return radonUnits + "/ч";
-                    }
+                const step = detectTimeInterval(rows);
+                return radonUnits + "/" + step;
             }
 
             function detectLambdaUnits(rows){
-                const step = getTimestepInMinues(rows);
-                if (step > 0 && step < 60) 
-                    return "1/мин";
-                if (step >= 60 && step < 60 * 24)
-                    return "1/ч";
+                const step = detectTimeInterval(rows);
+                return "1/" + step;
             }
 
             // ========== ПАРСИНГ ==========
@@ -1352,6 +1529,39 @@
                             for (let i = run.start; i < run.end; i++) state.rows[i].fit = fit;
                         }
                     }
+                }
+
+                updateIntervalsList();
+            }
+
+            function getSegmentStats(fit, rows){
+                const segment = rows.slice(fit.start, fit.end+1);
+                const values = segment.map(r => r.y).filter(Number.isFinite);
+                const n = values.length;
+                const segAvg = values.reduce((r,v) => r + v, 0) / values.length;
+                const segMin = Math.min(...values);
+                const segMax = Math.max(...values);
+
+                const sorted = [...values].sort((a, b) => a - b);
+                const segMedian = n % 2
+                    ? sorted[(n - 1) / 2]
+                    : (sorted[n / 2 - 1] + sorted[n / 2]) / 2;
+
+                const variance = values.reduce((s, v) => {
+                    const d = v - segAvg;
+                    return s + d * d;
+                }, 0) / (n - 1);
+
+                const segStd = Math.sqrt(variance);
+
+                return {
+                    n,
+                    avg: segAvg,
+                    std: segStd,
+                    se: segStd / Math.sqrt(n),
+                    med: segMedian,
+                    min: segMin,
+                    max: segMax
                 }
             }
 
@@ -1937,6 +2147,36 @@
                 ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
             }
 
+            function focusSegment(fit, rows){
+                if (!fit) return;
+
+                const startX = rows[fit.start].t;
+                const endX   = rows[fit.end].t;
+
+                const spanX = Math.max(endX - startX, 1);
+                const marginX = spanX * 0.2;
+
+                state.viewMinX = Math.max(state.dataMinX, startX - marginX);
+                state.viewMaxX = Math.min(state.dataMaxX, endX + marginX);
+
+                const values = rows
+                    .slice(fit.start, fit.end + 1)
+                    .map(r => r.y)
+                    .filter(Number.isFinite);
+
+                if (values.length) {
+                    const minY = Math.min(...values);
+                    const maxY = Math.max(...values);
+
+                    const spanY = Math.max(maxY - minY, 1e-6);
+                    const marginY = spanY * 0.2;
+
+                    state.viewMinY = Math.max(state.dataMinY, minY - marginY);
+                    state.viewMaxY = Math.min(state.dataMaxY, maxY + marginY);
+                }
+                render();
+            }
+
             // ========== ЭКСПОРТ ==========
             function exportData(delim, ext) {
                 const text = buildExportText(delim);
@@ -2046,6 +2286,95 @@
                         tr.innerHTML += `<td style="padding:6px;border-bottom:1px solid #eee;">${r.deltaTemp ? r.deltaTemp.toFixed(1) : ""}</td>`;
                     previewTableBody.appendChild(tr);
                 }
+            }
+
+            function updateIntervalsList(){
+                const intList = $("intervalsList");
+                intList.innerHTML = "";
+                if (!state.fits.length) return;
+                
+                let counter = 0;
+                let accummCounter = 0;
+                let dilutCounter = 0;
+                const stepUnits = detectTimeInterval(state.rows);
+                for (const f of state.fits){
+                    const intBegin = formatDateTimeShort(state.rows[f.start].t);
+                    const intEnd = formatDateTimeShort(state.rows[f.end].t);
+                    const stats = getSegmentStats(f, state.rows);
+
+                    if (f.flag === "Н") accummCounter++;
+                    if (f.flag === "Р") dilutCounter++;
+
+                    const item = document.createElement('div');
+                    item.classList.add('interval-card');
+                    item.innerHTML = `
+                    <div class="intervals-group-header">
+                        <div class="intervals-group-header-title">
+                            <span class="intervals-group-header-title" style="color:${f.flag === 'Н' ? 'var(--red)':'var(--blue)'};">● </span>
+                            № ${counter + 1} 
+                        </div>
+                        <div class="intervals-group-date">${intBegin}-${intEnd} (${f.end - f.start} ${stepUnits})</div>
+                    </div>
+                    <div class="metrics-group">
+                        <div class="grid-3">
+                            <div class="metric-item">
+                                <span class="metric-label">C0 <span class="unit">(${radonUnits})</span></span>
+                                <span class="metric-value">${f.C0.toFixed(1)}</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">φ <span class="unit">(${phiUnits})</span></span>
+                                <span class="metric-value">${f.phi.toFixed(1)} ± ${f.sePhi.toFixed(1)}</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">λ <span class="unit">(${lambdaUnits})</span></span>
+                                <span class="metric-value">${f.lambda < 0.001 ? f.lambda.toExponential(2) : f.lambda.toFixed(3)} ± ${f.lambda < 0.001 ? f.seLambda.toExponential(2) : f.seLambda.toFixed(3)}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="metrics-group">
+                        <span class="metrics-group-label">Статистика сегмента (${radonUnits})</span>
+                        <div class="grid-6">
+                            <div class="metric-item">
+                                <span class="metric-label">AVG</span>
+                                <span class="metric-value">${stats.avg > 1 ? stats.avg.toFixed(0) : stats.avg.toFixed(1)}</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">MED</span>
+                                <span class="metric-value">${stats.med > 1 ? stats.med.toFixed(0) : stats.med.toFixed(1)}</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">STD</span>
+                                <span class="metric-value">${stats.std > 1 ? stats.std.toFixed(0) : stats.std.toFixed(1)}</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">SE</span>
+                                <span class="metric-value">${stats.se > 1 ? stats.se.toFixed(0) : stats.se.toFixed(1)}</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">MIN</span>
+                                <span class="metric-value">${stats.min > 1 ? stats.min.toFixed(0) : stats.min.toFixed(1)}</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">MAX</span>
+                                <span class="metric-value">${stats.max > 1 ? stats.max.toFixed(0) : stats.max.toFixed(1)}</span>
+                            </div>
+                        </div>
+                    </div>
+                    `;
+                    item.addEventListener('click', () =>{
+                        document.querySelectorAll('.interval-card').forEach(b=>b.classList.remove('active'));
+                        item.classList.add('active');
+                        focusSegment(f, state.rows);
+                    });
+
+                    intList.appendChild(item);
+                    counter++;
+                }
+
+                $("statTotal").innerHTML = `Всего ${counter}`;
+                $("statAccumCount").innerHTML = `Накоплений ${accummCounter}`;
+                $("statDilutCount").innerHTML = `Разбавлений ${dilutCounter}`;
+
             }
 
             // ========== ОБРАБОТЧИКИ СОБЫТИЙ ==========
