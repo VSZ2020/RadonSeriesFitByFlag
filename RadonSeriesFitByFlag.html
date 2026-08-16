@@ -605,26 +605,26 @@
                 <div class="position: relative;">
                     <div class="autosearch-box left">
                         <span class="section-title">Автоматический поиск участков накопления и разбавления</span>
-                        <div class="autosearch-input blur-content">
+                        <div class="autosearch-input">
                             <label for="smoothWndInput">Окно сглаживания (кол-во значений)</label>
                             <input type="range" id="smoothWndInput" min="2" max="24" value="5" step="1"
-                                oninput="document.getElementById('smoothWndVal').textContent=this.value" disabled>
+                                oninput="document.getElementById('smoothWndVal').textContent=this.value">
                             <span class="val" id="smoothWndVal">5</span>
                         </div>
-                        <div class="autosearch-input blur-content">
+                        <div class="autosearch-input">
                             <label for="minSegmLenInput">Минимальная длина сегмента (в ед. шага)</label>
                             <input type="range" id="minSegmLenInput" min="2" max="24" value="3" step="1"
-                                oninput="document.getElementById('minSegmLenVal').textContent=this.value" disabled>
+                                oninput="document.getElementById('minSegmLenVal').textContent=this.value">
                             <span class="val" id="minSegmLenVal">3</span>
                         </div>
-                        <div class="autosearch-input blur-content">
+                        <div class="autosearch-input">
                             <label for="dropThrInput">Порог чувствительности (%/ч)</label>
                             <input type="range" id="dropThrInput" min="1" max="30" value="10" step="1"
-                                oninput="document.getElementById('dropThrVal').textContent=this.value" disabled>
+                                oninput="document.getElementById('dropThrVal').textContent=this.value">
                             <span class="val" id="dropThrVal">10</span>
                         </div>
-                        <div class="autosearch-input blur-content">
-                            <button disabled>Начать поиск</button>
+                        <div class="autosearch-input">
+                            <button id="searchSegmentsBtn">Начать поиск</button>
                         </div>
                     </div>
                     <div style="inset: 0; display: flex;align-items: center;justify-content: center;z-index:2;">Будет реализовано. Скоро</div>
@@ -1667,7 +1667,7 @@
                     sePhi, 
                     rmse: Math.sqrt(bestErr / times.length), 
                     start: indices[0], 
-                    end: indices[indices.length - 1] + 1 
+                    end: indices[indices.length - 1] + 1 < state.rows.length ? indices[indices.length - 1] + 1 : state.rows.length - 1
                 };
             }
 
@@ -1728,6 +1728,183 @@
                     min: segMin,
                     max: segMax
                 }
+            }
+
+            function movingAvg(rows, wndSize) {
+                const hw = Math.max(1, Math.floor(wndSize / 2));	//hw - половина ширины окна
+                return rows.map((p, i) => {
+                    let sum = 0, cnt = 0;
+                    for (let j = Math.max(0, i - hw); j < Math.min(rows.length, i + hw + 1); j++) { 
+                        sum += rows[j].y; 
+                        cnt++; 
+                    }
+                    return { 
+                        t: p.t, 
+                        y: cnt > 0 ? sum / cnt : p
+                    };
+                });
+            }
+
+            function identifyAccumulation(rows, params) {
+                const { smoothWindow, dropThreshold, minDuration } = params;
+                const n = rows.length;
+                if (n < 3) return { smooth: rows, segments: [] };
+
+                // 1. Сглаживание методом скользящего среднего
+                const smooth = movingAvg(rows, smoothWindow);
+                const vals = smooth.map(p => p.y);
+
+                // 2. Производная (нормализованная)
+                // dC = (C[i] - C[i-1])/|C[i-1]|
+                const roc = [];
+                for (let i = 1; i < n; i++) {
+                    const prev = vals[i-1];
+                    const cur  = vals[i];
+                    const delta = prev !== 0 ? (cur - prev) / Math.abs(prev) : (cur - prev);
+                    roc.push(delta);
+                }
+
+                // 3. Резкие падения (вентиляция)
+                const isVent = new Array(n).fill(false);
+                const dropIndices = []; // Индексы с падениями значений
+                for (let i = 0; i < roc.length; i++) {
+                    // Если скорость падения (первая производная) ниже отрицательного порога (в асб. значениях она выше порога), то спад найден
+                    if (roc[i] < -dropThreshold) {
+                        dropIndices.push(i + 1);
+                    }
+                }
+                const ventSet = new Set();
+                for (const idx of dropIndices) {
+                    ventSet.add(idx);
+                    // Проверка ближайших соседей на спад значений с пониженным порогом в 0.4 раз
+                    for (let offset = -2; offset <= 2; offset++) {
+                        const ni = idx + offset;
+                        if (ni > 0 && ni < n) {
+                            const ri = ni - 1;
+                            if (ri >= 0 && ri < roc.length && roc[ri] < -dropThreshold * 0.6) {
+                                ventSet.add(ni);
+                            }
+                        }
+                    }
+                }
+                for (const idx of ventSet) {
+                    if (idx >= 0 && idx < n) isVent[idx] = true;
+                }
+
+                // 4. Маркируем накопление: между падениями
+                const isAccum = new Array(n).fill(false);
+                let inSegment = false;
+                let segStart = 0;
+                const minMs = minDuration * 3600000;
+
+                for (let i = 0; i < n; i++) {
+                    if (isVent[i]) {
+                    if (inSegment && (rows[i-1].t - rows[segStart].t) >= minMs) {
+                        for (let j = segStart; j < i; j++) isAccum[j] = true;
+                    }
+                    inSegment = false;
+                    segStart = i + 1;
+                    } else {
+                        if (!inSegment) {
+                            inSegment = true;
+                            segStart = i;
+                        }
+                    }
+                }
+                if (inSegment && (rows[n-1].t - rows[segStart].t) >= minMs) {
+                    for (let j = segStart; j < n; j++) isAccum[j] = true;
+                }
+
+                // 5. Высокие устойчивые плато
+                const sorted = [...vals].sort((a,b) => a-b);
+                const median = sorted[Math.floor(sorted.length/2)];
+                const baseline = median || 0;
+                const highThreshold = baseline * 1.15;
+                for (let i = 0; i < n; i++) {
+                    if (isAccum[i]) continue;
+                    if (vals[i] > highThreshold) {
+                        let surroundHigh = 0, total = 0;
+                        for (let j = Math.max(0, i-3); j < Math.min(n, i+4); j++) {
+                            if (vals[j] > highThreshold) surroundHigh++;
+                            total++;
+                        }
+                        if (surroundHigh >= total * 0.6) {
+                            isAccum[i] = true;
+                        }
+                    }
+                }
+
+                // 6. Заполняем короткие разрывы (до minDuration)
+                for (let i = 0; i < n-1; i++) {
+                    if (isAccum[i] && !isAccum[i+1]) {
+                        let gapStart = i+1, gapEnd = gapStart;
+                        while (gapEnd < n && !isAccum[gapEnd]) gapEnd++;
+                        const gapLen = gapEnd - gapStart;
+                        if (gapLen > 0 && gapLen < minDuration) {
+                            for (let j = gapStart; j < gapEnd; j++) isAccum[j] = true;
+                        }
+                        i = gapEnd - 1;
+                    }
+                }
+
+                // 7. Формируем сегменты
+                const segments = [];
+                let segStartIdx = -1;
+                for (let i = 0; i <= n; i++) {
+                    const inSeg = i < n && isAccum[i];
+                    if (inSeg && segStartIdx === -1) {
+                        segStartIdx = i;
+                    } else if (!inSeg && segStartIdx !== -1) {
+                        const segEndIdx = i - 1;
+                        const dur = rows[segEndIdx].t - rows[segStartIdx].t;
+                        if (dur >= minMs) {
+                            const segVals = rows.slice(segStartIdx, segEndIdx+1).map(p => p.y);
+                            segments.push({
+                                start: segStartIdx,
+                                end:   segEndIdx,
+                                flag: "Н"
+                            });
+                        }
+                        segStartIdx = -1;
+                    }
+                }
+
+                return { smooth, segments };
+            }
+
+            function searchSegments(){
+                const searchBtn = $('searchSegmentsBtn');
+                const oldBtnText = searchBtn.textContent;
+                searchBtn.textContent = "Идет поиск";
+                searchBtn.disabled = true;
+
+                if (!state.rows || state.rows.length === 0) return;
+
+                const params = {
+                    smoothWindow:  parseInt($('smoothWndInput').value),
+                    minDuration:   parseInt($('minSegmLenInput').value),
+                    dropThreshold: parseInt($('dropThrInput').value) / 100.0
+                };
+
+                const { smooth, segments } = identifyAccumulation(state.rows, params);
+
+                // Reset all frags to "Dilution"
+                for (let i = 0; i < state.rows.length; i++){
+                    state.rows[i].flag = "Р";
+                }
+
+                // Apply flags to found segments
+                for (const segment of segments){
+                    for (let i = segment.start; i <= segment.end; i++){
+                        state.rows[i].flag = segment.flag;
+                    }   
+                }
+
+                recomputeFits();
+                updatePreviewTable();
+                searchBtn.textContent = oldBtnText;
+                searchBtn.disabled = false;
+                render();
             }
 
             // ========== ПРИМЕНЕНИЕ ФЛАГОВ ==========
@@ -2799,6 +2976,10 @@
                     state.rect = null;
                     render();
                 }
+            });
+
+            $('searchSegmentsBtn').addEventListener('click', e=> {
+                searchSegments();
             });
 
             window.addEventListener("resize", () => render());
