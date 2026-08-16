@@ -1872,12 +1872,13 @@
             }
 
             function searchSegments(){
+                if (!state.rows || state.rows.length === 0) return;
+                
                 const searchBtn = $('searchSegmentsBtn');
                 const oldBtnText = searchBtn.textContent;
+                
                 searchBtn.textContent = "Идет поиск";
                 searchBtn.disabled = true;
-
-                if (!state.rows || state.rows.length === 0) return;
 
                 const params = {
                     smoothWindow:  parseInt($('smoothWndInput').value),
