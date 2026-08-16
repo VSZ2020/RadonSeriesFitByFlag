@@ -100,8 +100,8 @@
        
 
         .button-container {
-            gap: 8px;
-            display: flex;
+            gap: 4px 8px;
+            display: inline-flex;
             flex-wrap: wrap;
             align-items: center;
         }
@@ -224,6 +224,10 @@
             background: var(--bg-card);
             padding: 3px 6px;
             border-radius: 6px;
+        }
+
+        .mb-8 {
+            margin-bottom: 8px;
         }
 
         header h1 {
@@ -631,20 +635,18 @@
         
 
         <div class="middle-grid">
-            <section class="card" style="padding:10px; margin-top:0px;">
-                <div class="mini-row" style="margin-bottom:10px;">
-                    <div class="button-container">
-                        <span style="padding:10px;">Выберите тип участка</span>
-                        <button id="noneBtn" class="secondary active">Не задан</button>
-                        <button id="flagAccBtn" class="accumulation">Накопление (Н)</button>
-                        <button id="flagVentBtn" class="ventilation">Разбавление (Р)</button>
-                        <button id="flagTempFlucBtn" class="temp-fluctuations">Температурные колебания (ТК)</button>
-                        <span class="divider"></span>
-                        <span style="padding:10px;">Масштаб</span>
-                        <button id="logYBtn">Log Y: OFF</button>
-                        <button id="resetZoomBtn">Сброс масштаба</button>
-                        <span class="divider"></span>
-                    </div>
+            <section class="card" style="padding:10px;">
+                <div class="button-container mb-8">
+                    <span style="padding:10px;">Выберите тип участка</span>
+                    <button id="noneBtn" class="secondary active">Не задан</button>
+                    <button id="flagAccBtn" class="accumulation">Накопление (Н)</button>
+                    <button id="flagVentBtn" class="ventilation">Разбавление (Р)</button>
+                    <button id="flagTempFlucBtn" class="temp-fluctuations">Температурные колебания (ТК)</button>
+                    <span class="divider"></span>
+                    <span style="padding:10px;">Масштаб</span>
+                    <button id="logYBtn">Log Y: OFF</button>
+                    <button id="resetZoomBtn">Сброс масштаба</button>
+                    <span class="divider"></span>
                 </div>
                 <section class="right card">
                     <div class="canvas-wrap">
