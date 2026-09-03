@@ -624,7 +624,7 @@
                             <span class="val" id="dropThrVal">10</span>
                         </div>
                         <div class="autosearch-input">
-                            <button id="searchSegmentsBtn">Начать поиск</button>
+                            <button id="searchSegmentsBtn" disabled>Начать поиск</button>
                         </div>
                     </div>
                 </div>
@@ -732,9 +732,9 @@
                     <input type="checkbox" id="isShowOnlyIntervals"/>
                     <label for="isShowOnlyIntervals">Показать только обработанные участки</label>
                 </div>
-                <button id="exportCsvBtn">Экспорт в .csv</button>
-                <button id="exportTxtBtn">Экспорт в .txt</button>
-                <button id="copyBtn">Копировать в буфер обмена</button>
+                <button id="exportCsvBtn" disabled>Экспорт в .csv</button>
+                <button id="exportTxtBtn" disabled>Экспорт в .txt</button>
+                <button id="copyBtn" disabled>Копировать в буфер обмена</button>
             </div>
             <div style="overflow:auto; max-height:360px; border:1px solid var(--border); border-radius:10px;">
                 <table id="previewTable" style="width:100%; border-collapse:collapse; font-size:12px; text-align:center;">
@@ -1152,6 +1152,10 @@
                 // updatePreviewTable();
                 // render();
                 state.hasChanges = true;
+                $('searchSegmentsBtn').disabled = false;
+                $('exportCsvBtn').disabled = false;
+                $('exportTxtBtn').disabled = false;
+                $('copyBtn').disabled = false;
             }
 
             function loadExample(){
