@@ -813,6 +813,7 @@
                 hasDeltaTemp: false,
                 // Для интерактивной легенды
                 legendItems: [],
+                hasChanges : false,
             };
 
             // ========== ПАРАМЕТРЫ МОДЕЛИ ==========
@@ -887,6 +888,7 @@
 
             $("clearInputBtn").addEventListener("click", () => {
                 inputText.value = "";
+                state.hasChanges = false;
             });
 
             $("applyConstraintsBtn").addEventListener("click", () => {
@@ -1149,6 +1151,7 @@
                 // recomputeFits();
                 // updatePreviewTable();
                 // render();
+                state.hasChanges = true;
             }
 
             function loadExample(){
@@ -1696,6 +1699,7 @@
                 }
 
                 updateIntervalsList();
+                state.hasChanges = true;
             }
 
             function getSegmentStats(fit, rows){
@@ -2553,6 +2557,7 @@
                 a.click();
                 a.remove();
                 URL.revokeObjectURL(url);
+                state.hasChanges = false;
             }
 
             function buildExportText(delim) {
@@ -2983,6 +2988,15 @@
             });
 
             window.addEventListener("resize", () => render());
+
+            window.addEventListener('beforeunload', (e) => {
+                if (state.hasChanges){
+                    if (!window.confirm('Вы уверены, что хотите закрыть страницу?')){
+                        e.preventDefault();
+                        e.returnValue = '';
+                    }
+                }
+            });
 
             // Инициализация
             resizeCanvas();
