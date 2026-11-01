@@ -155,6 +155,16 @@
             background: #fff;
         }
 
+        .chart-right-wrapper {
+            width: 400px;
+            gap: 12px;
+            display: flex;
+            flex-direction: column;
+
+            min-height: 0;
+            max-height: 90vh;
+        }
+
         .checkbox-group {
             border: 1px solid var(--border);
             border-radius: 8px;
@@ -262,13 +272,10 @@
         }
 
         .intervals-group-wrapper {
-            width: 400px;
-
             display: flex;
             flex-direction: column;
 
             min-height: 0;
-            max-height: 90vh;
             overflow: hidden;
             padding: 12px;
         }
@@ -483,6 +490,11 @@
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
         }
 
+        .trend-params {
+            display: block;
+            color: var(--text-muted);
+        }
+
         .top-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -518,6 +530,7 @@
             }
         }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
@@ -697,18 +710,28 @@
                 <div class="legend-hint" style="color:var(--muted);font-size: small;">💡Нажатие на элемент в легенде графика показывает/скрывает серию</div>
             </section>
 
-            <section class="card intervals-group-wrapper">
-                <div class="section-title">Перечень интервалов</div>
-                <div class="stats-block">
-                    <span class="stats-item total" id="statTotal">Всего 0</span>
-                    <div class="stats-item"><span class="accumulation-marker">● </span><span id="statAccumCount">Накоплений 0</span></div>
-                    <div class="stats-item"><span class="dilution-marker">● </span><span id="statDilutCount">Разбавлений 0</span></div>
+            <section class="chart-right-wrapper">
+                <div class="card intervals-group-wrapper">
+                    <div class="section-title">Перечень интервалов</div>
+                    <div class="stats-block">
+                        <span class="stats-item total" id="statTotal">Всего 0</span>
+                        <div class="stats-item"><span class="accumulation-marker">● </span><span id="statAccumCount">Накоплений 0</span></div>
+                        <div class="stats-item"><span class="dilution-marker">● </span><span id="statDilutCount">Разбавлений 0</span></div>
+                    </div>
+                    <div class="intervals-group" id="intervalsList">
+                    </div>
+                    <div style="color:var(--muted);">Примечание: указана ±SE для φ и λ</div>
                 </div>
-                <div class="intervals-group" id="intervalsList">
+                
+                <div class="card" style="padding:12px;">
+                    <div class="section-title">Зависимость φ от λ</div>
+                    <canvas id="chart2" style="position: relative; width: 100%; max-width: 600px; height: 450px;"></canvas>
+                    <div class="trend_params" id="trend_params_item">
+
+                    </div>
                 </div>
-                <div style="color:var(--muted);">Примечание: указана ±SE для φ и λ</div>
             </section>
-        
+
         </div>
         <section class="card" style="padding:12px;">
             <div class="section-title">Предпросмотр результатов</div>
@@ -766,7 +789,10 @@
         (() => {
             const $ = id => document.getElementById(id);
             const canvas = $("chart");
+            const canvas2 = $("chart2");
             const ctx = canvas.getContext("2d");
+            const ctx2 = canvas2.getContext("2d");
+            let lambdaPhiChart = null;
             const inputText = $("inputText");
             const fitText = $("fitText");
             const previewTableBody = document.querySelector("#previewTable tbody");
@@ -1677,6 +1703,56 @@
                 };
             }
 
+            function linearFit(X, Y) {
+                const n = X.length;
+                if (n !== Y.length) throw new Error("X and Y arrays must be of equal length.");
+                if (n === 0) return { slope: 0, intercept: 0 };
+                if (n < 2) {
+                    throw new Error("At least 2 data points are required for linear fit.");
+                }
+
+                let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+
+                for (let i = 0; i < n; i++) {
+                    sumX += X[i];
+                    sumY += Y[i];
+                    sumXY += X[i] * Y[i];
+                    sumXX += X[i] * X[i];
+                }
+
+                const denominator = n * sumXX - sumX * sumX;
+                if (denominator === 0) {
+                    throw new Error("All X values are identical; slope is undefined.");
+                }
+
+                // Calculate slope (m) and y-intercept (b)
+                const slope = (n * sumXY - sumX * sumY) / denominator;
+                const intercept = (sumY - slope * sumX) / n;
+
+                const meanY = sumY / n;
+                let ssRes = 0; // Сумма квадратов остатков
+                let ssTot = 0; // Общая сумма квадратов
+
+                for (let i = 0; i < n; i++) {
+                    const yPred = slope * X[i] + intercept;
+                    ssRes += Math.pow(Y[i] - yPred, 2);
+                    ssTot += Math.pow(Y[i] - meanY, 2);
+                }
+
+                const rSquared = ssTot === 0 ? 1 : 1 - (ssRes / ssTot);
+                const sE = Math.sqrt(ssRes / (n - 2));
+                const sumSqDevX = denominator / n;
+                const seSlope = sE / Math.sqrt(sumSqDevX);
+                const seIntercept = sE * Math.sqrt((1 / n) + Math.pow(sumX / n, 2) / sumSqDevX);
+
+                return {
+                    slope,
+                    intercept,
+                    rSquared,
+                    predict: (x) => slope * x + intercept
+                };
+            }
+
             function recomputeFits() {
                 let segmentsCounter = 0;
                 state.fits = [];
@@ -1703,6 +1779,7 @@
                 }
 
                 updateIntervalsList();
+                redrawCanvas2();
                 state.hasChanges = true;
             }
 
@@ -2549,6 +2626,123 @@
                 render();
             }
 
+            function initCanvas2(){
+                lambdaPhiChart = new Chart(ctx2, {
+                    type: 'line',
+                    data: {
+                        datasets: [
+                            {
+                                type: 'scatter',
+                                label: 'Накопление',
+                                backgroundColor: 'rgba(220, 38, 38, 0.6)',
+                                borderColor: 'rgba(220, 38, 38, 1)',
+                                pointRadius: 3
+                            },
+                            {
+                                type: 'scatter',
+                                label: 'Разбавление',
+                                backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                                borderColor: 'rgba(54, 162, 235, 1)',
+                                pointRadius: 3
+                            },
+                            {
+                                type: 'line',
+                                label: 'Накопление (тренд)',
+                                borderColor: 'rgba(220, 38, 38, 1)',
+                                fill: false,
+                                pointRadius: 0
+                            },
+                            {
+                                type: 'line',
+                                label: 'Разбавление (тренд)',
+                                borderColor: 'rgba(54, 162, 235, 1)',
+                                fill: false,
+                                pointRadius: 0
+                            },
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        aspectRatio: 1.2,
+                        scales: {
+                            x: {
+                                type: 'linear',
+                                position: 'bottom',
+                                grace: '5%',
+                                title: {
+                                    display: true,
+                                    text: 'λ, ' + lambdaUnits
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'φ, ' + phiUnits
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            function redrawCanvas2(){
+                if (!lambdaPhiChart)
+                    return;
+
+                const pts1 = [];
+                const pts2 = [];
+                for (const fit of state.fits){
+                    if (fit.flag === "Н")
+                        pts1.push({x: fit.lambda, y: fit.phi});
+                    if (fit.flag === "Р")
+                        pts2.push({x: fit.lambda, y: fit.phi});
+                }
+                lambdaPhiChart.data.datasets[0].data = pts1;
+                lambdaPhiChart.data.datasets[1].data = pts2;
+
+                const pts1x = pts1.map(p => p.x);
+                const pts1y = pts1.map(p => p.y);
+                const pts2x = pts2.map(p => p.x);
+                const pts2y = pts2.map(p => p.y);
+                
+                let trendParamsLabel = "<b>y(x) = kx + b</b></br>"; 
+
+                if (lambdaPhiChart.data.datasets[2].data && pts1x.length > 2){
+                    const model1 = linearFit(pts1x, pts1y);
+                    const p1_min_x = Math.min(...pts1x);
+                    const p1_max_x = Math.max(...pts1x);
+
+                    lambdaPhiChart.data.datasets[2].data = [
+                        {x: 0, y: model1.predict(0)},
+                        {x: p1_min_x, y: model1.predict(p1_min_x)},
+                        {x: p1_max_x, y: model1.predict(p1_max_x)},
+                    ];
+                    trendParamsLabel += `<span>Накопление (тренд): k = ${model1.slope.toFixed(1)}, b = ${model1.intercept.toFixed(1)}</span>`;
+                }
+                else
+                {
+                    lambdaPhiChart.data.datasets[2].data = [];
+                }
+                
+                if (lambdaPhiChart.data.datasets[3].data && pts2x.length > 2){
+                    const model2 = linearFit(pts2x, pts2y);
+                    const p2_min_x = Math.min(...pts2x);
+                    const p2_max_x = Math.max(...pts2x);
+                    lambdaPhiChart.data.datasets[3].data = [
+                        {x: 0, y: model2.predict(0)},
+                        {x: p2_min_x, y: model2.predict(p2_min_x)},
+                        {x: p2_max_x, y: model2.predict(p2_max_x)},
+                    ];
+                    trendParamsLabel += `</br><span>Разбавление (тренд): k = ${model2.slope.toFixed(1)}, b = ${model2.intercept.toFixed(1)}</span>`;
+                } else
+                {
+                    lambdaPhiChart.data.datasets[3].data = [];
+                }
+                lambdaPhiChart.update();
+                $('trend_params_item').innerHTML = trendParamsLabel;
+            }
+
             // ========== ЭКСПОРТ ==========
             function exportData(delim, ext) {
                 const text = buildExportText(delim);
@@ -2583,17 +2777,17 @@
                     lines.push([
                         r.fit ? r.fit.id : "",
                         formatDateTime(r.t),
-                        String(r.y),
+                        r.y.toLocaleString(),
                         r.flag == null ? "" : r.flag,
-                        r.fit ? r.fit.C0 : "",
-                        r.fit ? r.fit.phi : "",
-                        r.fit ? r.fit.lambda : "",
-                        r.tempOut !== null && isFinite(r.tempOut) ? r.tempOut : "",
-                        r.tempIn !== null && isFinite(r.tempIn) ? r.tempIn : "",
-                        r.deltaTemp !== null && isFinite(r.deltaTemp) ? r.deltaTemp : "",
-                        r.fit ? r.fit.sePhi : "",
-                        r.fit ? r.fit.seLambda : "",
-                        r.fit ? r.fit.rmse : "",
+                        r.fit ? r.fit.C0.toLocaleString() : "",
+                        r.fit ? r.fit.phi.toLocaleString() : "",
+                        r.fit ? r.fit.lambda.toLocaleString() : "",
+                        r.tempOut !== null && isFinite(r.tempOut) ? r.tempOut.toLocaleString() : "",
+                        r.tempIn !== null && isFinite(r.tempIn) ? r.tempIn.toLocaleString() : "",
+                        r.deltaTemp !== null && isFinite(r.deltaTemp) ? r.deltaTemp.toLocaleString() : "",
+                        r.fit ? r.fit.sePhi.toLocaleString() : "",
+                        r.fit ? r.fit.seLambda.toLocaleString() : "",
+                        r.fit ? r.fit.rmse.toLocaleString() : "",
                     ].join(delim));
                 }
                 return lines.join("\n");
@@ -2643,20 +2837,20 @@
                     tr.innerHTML = `
                     <td style="padding:6px;border-bottom:1px solid #eee;">${r.fit ? r.fit.id : ""}</td>
                     <td style="padding:6px;border-bottom:1px solid #eee;">${formatDateTime(r.t)}</td>
-                    <td style="padding:6px;border-bottom:1px solid #eee;">${r.y.toFixed(1)}</td>
+                    <td style="padding:6px;border-bottom:1px solid #eee;">${r.y.toFixed(1).toLocaleString()}</td>
                     <td style="padding:6px;border-bottom:1px solid #eee;">${r.flag == null ? "" : r.flag}</td>
-                    <td style="padding:6px;border-bottom:1px solid #eee;">${r.fit ? r.fit.C0.toFixed(1) : ""}</td>
-                    <td style="padding:6px;border-bottom:1px solid #eee;">${r.fit ? r.fit.sePhi.toFixed(1) : ""}</td>
-                    <td style="padding:6px;border-bottom:1px solid #eee;">${r.fit ? r.fit.phi.toFixed(1) : ""}</td>
-                    <td style="padding:6px;border-bottom:1px solid #eee;">${r.fit ? (r.fit < 0.001 ? r.fit.lambda.toExponential(2) : r.fit.lambda.toFixed(3)) : ""}</td>
-                    <td style="padding:6px;border-bottom:1px solid #eee;">${r.fit ? (r.fit.seLambda < 0.001 ? r.fit.seLambda.toExponential(2) : r.fit.seLambda.toFixed(3)) : ""}</td>
+                    <td style="padding:6px;border-bottom:1px solid #eee;">${r.fit ? r.fit.C0.toFixed(1).toLocaleString() : ""}</td>
+                    <td style="padding:6px;border-bottom:1px solid #eee;">${r.fit ? r.fit.sePhi.toFixed(1).toLocaleString() : ""}</td>
+                    <td style="padding:6px;border-bottom:1px solid #eee;">${r.fit ? r.fit.phi.toFixed(1).toLocaleString() : ""}</td>
+                    <td style="padding:6px;border-bottom:1px solid #eee;">${r.fit ? (r.fit < 0.001 ? r.fit.lambda.toExponential(2).toLocaleString() : r.fit.lambda.toFixed(3).toLocaleString()) : ""}</td>
+                    <td style="padding:6px;border-bottom:1px solid #eee;">${r.fit ? (r.fit.seLambda < 0.001 ? r.fit.seLambda.toExponential(2).toLocaleString() : r.fit.seLambda.toFixed(3).toLocaleString()) : ""}</td>
                     `;
                     if (state.hasTempOut)
-                        tr.innerHTML += `<td style="padding:6px;border-bottom:1px solid #eee;">${r.tempOut ? r.tempOut.toFixed(1) : ""}</td>`;
+                        tr.innerHTML += `<td style="padding:6px;border-bottom:1px solid #eee;">${r.tempOut ? r.tempOut.toFixed(1).toLocaleString() : ""}</td>`;
                     if (state.hasTempIn)
-                        tr.innerHTML += `<td style="padding:6px;border-bottom:1px solid #eee;">${r.tempIn ? r.tempIn.toFixed(1) : ""}</td>`;
+                        tr.innerHTML += `<td style="padding:6px;border-bottom:1px solid #eee;">${r.tempIn ? r.tempIn.toFixed(1).toLocaleString() : ""}</td>`;
                     if (state.hasDeltaTemp)
-                        tr.innerHTML += `<td style="padding:6px;border-bottom:1px solid #eee;">${r.deltaTemp ? r.deltaTemp.toFixed(1) : ""}</td>`;
+                        tr.innerHTML += `<td style="padding:6px;border-bottom:1px solid #eee;">${r.deltaTemp ? r.deltaTemp.toFixed(1).toLocaleString() : ""}</td>`;
                     previewTableBody.appendChild(tr);
                 }
             }
@@ -2934,7 +3128,8 @@
                 if (!state.rows.length) return;
                 
                 const p = canvasPos(ev);
-                const factor = ev.deltaY < 0 ? 0.9 : 1.1;
+                const scrollValue = Math.abs(ev.deltaY) > Math.abs(ev.deltaX) ? ev.deltaY : ev.deltaX;
+                const factor = scrollValue < 0 ? 0.9 : 1.1;
 
                 if (ev.ctrlKey) {
                     ev.preventDefault();
@@ -3005,6 +3200,7 @@
             // Инициализация
             resizeCanvas();
             drawEmptyState();
+            initCanvas2();
         })();
     </script>
 </body>
