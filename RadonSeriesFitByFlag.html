@@ -2112,12 +2112,12 @@
                 ctx.fillStyle = "#111827";
                 ctx.strokeStyle = "#9ca3af";
                 ctx.lineWidth = 1;
-                ctx.font = "12px system-ui, sans-serif";
+                ctx.font = "14px system-ui, sans-serif";
                 ctx.textAlign = "right";
                 ctx.textBaseline = "middle";
                 for (const v of yTicks) {
                     const y = yToPx(v);
-                    if (y < y0 + 10 || y > y1 - 10) continue;
+                    if (y < y0 + 5 || y > y1 - 5) continue;
 
                     ctx.beginPath();
                     ctx.moveTo(x0 - 5, y);
@@ -2163,7 +2163,7 @@
                 ctx.restore();
 
                 // Заголовки осей
-                ctx.font = "14px system-ui, sans-serif";
+                ctx.font = "16px system-ui, sans-serif";
                 ctx.fillStyle = "#000000";
                 ctx.textAlign = "center";
                 ctx.textBaseline = "bottom";
@@ -2706,7 +2706,7 @@
                 const pts2x = pts2.map(p => p.x);
                 const pts2y = pts2.map(p => p.y);
                 
-                let trendParamsLabel = "<b>y(x) = kx + b</b></br>k - наклон, b - отрезок</br>"; 
+                let trendParamsLabel = `Параметры линии тренда <b>φ(λ) = <i>a</i>λ + <i>b</i></b>, где <i>a</i> - наклон, <i>b</i> - отрезок</br><table style="width:100%; border-collapse:collapse; font-size:12px; text-align:center;"><tr><th></th><th>a, (${phiUnits})/(${lambdaUnits})</th><th>b, ${phiUnits}</th></tr>`; 
 
                 if (lambdaPhiChart.data.datasets[2].data && pts1x.length > 2){
                     const model1 = linearFit(pts1x, pts1y);
@@ -2718,7 +2718,7 @@
                         {x: p1_min_x, y: model1.predict(p1_min_x)},
                         {x: p1_max_x, y: model1.predict(p1_max_x)},
                     ];
-                    trendParamsLabel += `<span>Накопление (тренд): k = ${model1.slope.toFixed(1)}, b = ${model1.intercept.toFixed(1)}</span>`;
+                    trendParamsLabel += `<tr style="color: var(--red);"><td>Накопление</td><td>${model1.slope.toFixed(1).toLocaleString()}</td><td>${model1.intercept.toFixed(1).toLocaleString()}</td></tr>`;
                 }
                 else
                 {
@@ -2734,11 +2734,12 @@
                         {x: p2_min_x, y: model2.predict(p2_min_x)},
                         {x: p2_max_x, y: model2.predict(p2_max_x)},
                     ];
-                    trendParamsLabel += `</br><span>Разбавление (тренд): k = ${model2.slope.toFixed(1)} (${phiUnits})/(${lambdaUnits}), b = ${model2.intercept.toFixed(1)} ${phiUnits}</span>`;
+                    trendParamsLabel += `<tr style="color: var(--blue);"><td>Разбавление</td><td>${model2.slope.toFixed(1).toLocaleString()}</td><td>${model2.intercept.toFixed(1).toLocaleString()}</td></tr>`;
                 } else
                 {
                     lambdaPhiChart.data.datasets[3].data = [];
                 }
+                trendParamsLabel += "</table>"
                 lambdaPhiChart.update();
                 $('trend_params_item').innerHTML = trendParamsLabel;
             }
@@ -2890,7 +2891,7 @@
                             <span class="intervals-group-header-title" style="color:${f.flag === 'Н' ? 'var(--red)':'var(--blue)'};">● </span>
                             № ${counter + 1} 
                         </div>
-                        <div class="intervals-group-date">${intBegin}-${intEnd} (${f.end - f.start} ${stepUnits})</div>
+                        <div class="intervals-group-date">${intBegin}-${intEnd} (длит. ${f.end - f.start} ${stepUnits})</div>
                     </div>
                     <div class="metrics-group">
                         <div class="grid-3">
