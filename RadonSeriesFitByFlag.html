@@ -2706,7 +2706,7 @@
                 const pts2x = pts2.map(p => p.x);
                 const pts2y = pts2.map(p => p.y);
                 
-                let trendParamsLabel = "<b>y(x) = kx + b</b></br>"; 
+                let trendParamsLabel = "<b>y(x) = kx + b</b></br>k - наклон, b - отрезок</br>"; 
 
                 if (lambdaPhiChart.data.datasets[2].data && pts1x.length > 2){
                     const model1 = linearFit(pts1x, pts1y);
@@ -2734,7 +2734,7 @@
                         {x: p2_min_x, y: model2.predict(p2_min_x)},
                         {x: p2_max_x, y: model2.predict(p2_max_x)},
                     ];
-                    trendParamsLabel += `</br><span>Разбавление (тренд): k = ${model2.slope.toFixed(1)}, b = ${model2.intercept.toFixed(1)}</span>`;
+                    trendParamsLabel += `</br><span>Разбавление (тренд): k = ${model2.slope.toFixed(1)} (${phiUnits})/(${lambdaUnits}), b = ${model2.intercept.toFixed(1)} ${phiUnits}</span>`;
                 } else
                 {
                     lambdaPhiChart.data.datasets[3].data = [];
@@ -2763,17 +2763,24 @@
                     "№ участка", "Дата и время", `ОА радона, ${radonUnits}`, "Тип участка",
                     `C0, ${radonUnits}`, `φ, ${phiUnits}`, `λ, ${lambdaUnits}`, 
                     `T outdoor, ${temperatureUnits}`, `T indoor, ${temperatureUnits}`, `Delta T, ${temperatureUnits}`,
-                    `±SE(φ), ${phiUnits}`,`±SE(λ), ${lambdaUnits}`, `±RMSE(C(t)), ${radonUnits}`
+                    `±SE(φ), ${phiUnits}`,`±SE(λ), ${lambdaUnits}`, `±RMSE(C(t)), ${radonUnits}`,  `ОА радона (модель), ${radonUnits}`
                 ].join(delim);
                 const lines = [
                     "# Результаты обработки временной серии ОА радона",
                     "# Типы участков: Р - разбавление, Н - накопление, ТК - температурные колебания",
                     "# Обозначения: φ - скорость поступления ОА радона, λ - кратность воздухообмена",
                     `# Ограничения параметров аппроксимации: для накопления λ [${minLambda}, ${maxLambda}], φ [${minPhi}, ${maxPhi}]; для разбавления λ [${minLambdaDilution}, ${maxLambdaDilution}], φ [${minPhiDilution}, ${maxPhiDilution}]`,
-                    "# Единицы измерения: C0 - Бк/м3, φ - Бк/м3/мин или Бк/м3/ч (зависит от шага серии), λ - 1/мин или 1/ч (зависит от шага серии)",
+                    `# Единицы измерения: C0 - ${radonUnits}, φ - ${phiUnits}, λ - ${lambdaUnits}`,
                     header
                 ];
+                
+                let previousFlag = null;
+                let counter = 0;
                 for (const r of state.rows) {
+                    if (r.flag !== previousFlag){
+                        counter = 0;
+                    }
+
                     lines.push([
                         r.fit ? r.fit.id : "",
                         formatDateTime(r.t),
@@ -2788,7 +2795,10 @@
                         r.fit ? r.fit.sePhi.toLocaleString() : "",
                         r.fit ? r.fit.seLambda.toLocaleString() : "",
                         r.fit ? r.fit.rmse.toLocaleString() : "",
+                        r.fit ? model(counter, r.fit.lambda, r.fit.phi, r.fit.C0).toLocaleString() : ""
                     ].join(delim));
+                    counter++;
+                    previousFlag = r.flag;
                 }
                 return lines.join("\n");
             }
