@@ -2886,15 +2886,15 @@
                         <div class="grid-3">
                             <div class="metric-item">
                                 <span class="metric-label">C0 <span class="unit">(${radonUnits})</span></span>
-                                <span class="metric-value">${f.C0.toFixed(1)}</span>
+                                <span class="metric-value">${f.C0.toFixed(1).toLocaleString()}</span>
                             </div>
                             <div class="metric-item">
                                 <span class="metric-label">φ <span class="unit">(${phiUnits})</span></span>
-                                <span class="metric-value">${f.phi.toFixed(1)} ± ${f.sePhi.toFixed(1)}</span>
+                                <span class="metric-value">${f.phi.toFixed(1).toLocaleString()} ± ${f.sePhi.toFixed(1).toLocaleString()}</span>
                             </div>
                             <div class="metric-item">
                                 <span class="metric-label">λ <span class="unit">(${lambdaUnits})</span></span>
-                                <span class="metric-value">${f.lambda < 0.001 ? f.lambda.toExponential(2) : f.lambda.toFixed(3)} ± ${f.lambda < 0.001 ? f.seLambda.toExponential(2) : f.seLambda.toFixed(3)}</span>
+                                <span class="metric-value">${f.lambda < 0.001 ? f.lambda.toExponential(2).toLocaleString() : f.lambda.toFixed(3).toLocaleString()} ± ${f.lambda < 0.001 ? f.seLambda.toExponential(2).toLocaleString() : f.seLambda.toFixed(3).toLocaleString()}</span>
                             </div>
                         </div>
                     </div>
@@ -2903,27 +2903,27 @@
                         <div class="grid-6">
                             <div class="metric-item">
                                 <span class="metric-label">AVG</span>
-                                <span class="metric-value">${stats.avg > 1 ? stats.avg.toFixed(0) : stats.avg.toFixed(1)}</span>
+                                <span class="metric-value">${stats.avg > 1 ? stats.avg.toFixed(0).toLocaleString() : stats.avg.toFixed(1).toLocaleString()}</span>
                             </div>
                             <div class="metric-item">
                                 <span class="metric-label">MED</span>
-                                <span class="metric-value">${stats.med > 1 ? stats.med.toFixed(0) : stats.med.toFixed(1)}</span>
+                                <span class="metric-value">${stats.med > 1 ? stats.med.toFixed(0).toLocaleString() : stats.med.toFixed(1).toLocaleString()}</span>
                             </div>
                             <div class="metric-item">
                                 <span class="metric-label">STD</span>
-                                <span class="metric-value">${stats.std > 1 ? stats.std.toFixed(0) : stats.std.toFixed(1)}</span>
+                                <span class="metric-value">${stats.std > 1 ? stats.std.toFixed(0).toLocaleString() : stats.std.toFixed(1).toLocaleString()}</span>
                             </div>
                             <div class="metric-item">
                                 <span class="metric-label">SE</span>
-                                <span class="metric-value">${stats.se > 1 ? stats.se.toFixed(0) : stats.se.toFixed(1)}</span>
+                                <span class="metric-value">${stats.se > 1 ? stats.se.toFixed(0).toLocaleString() : stats.se.toFixed(1).toLocaleString()}</span>
                             </div>
                             <div class="metric-item">
                                 <span class="metric-label">MIN</span>
-                                <span class="metric-value">${stats.min > 1 ? stats.min.toFixed(0) : stats.min.toFixed(1)}</span>
+                                <span class="metric-value">${stats.min > 1 ? stats.min.toFixed(0).toLocaleString() : stats.min.toFixed(1).toLocaleString()}</span>
                             </div>
                             <div class="metric-item">
                                 <span class="metric-label">MAX</span>
-                                <span class="metric-value">${stats.max > 1 ? stats.max.toFixed(0) : stats.max.toFixed(1)}</span>
+                                <span class="metric-value">${stats.max > 1 ? stats.max.toFixed(0).toLocaleString() : stats.max.toFixed(1).toLocaleString()}</span>
                             </div>
                         </div>
                     </div>
