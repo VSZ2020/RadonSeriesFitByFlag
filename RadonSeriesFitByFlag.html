@@ -2058,9 +2058,17 @@
                 // Оси
                 ctx.strokeStyle = "#374151";
                 ctx.lineWidth = 1.2;
+                // Левая ось
                 ctx.beginPath();
                 ctx.moveTo(x0, y0);
                 ctx.lineTo(x0, y1);
+                ctx.stroke();
+                // Верхняя ось
+                ctx.beginPath();
+                ctx.moveTo(x0, y0);
+                ctx.lineTo(x1, y0);
+                // Нижняя ось
+                ctx.moveTo(x0, y1);
                 ctx.lineTo(x1, y1);
                 ctx.stroke();
 
@@ -2117,7 +2125,7 @@
                 ctx.textBaseline = "middle";
                 for (const v of yTicks) {
                     const y = yToPx(v);
-                    if (y < y0 + 5 || y > y1 - 5) continue;
+                    if (y < y0 + 0 || y > y1 - 0) continue;
 
                     ctx.beginPath();
                     ctx.moveTo(x0 - 5, y);
@@ -2485,25 +2493,25 @@
                 ctx.save();
                 const tooltipLines = [
                     `X: ${formatDateTime(r.t)} (${getDayOfWeek(r.t)})`,
-                    `Y: ${r.y.toFixed(1)} ${radonUnits}`
+                    `Y: ${r.y.toFixed(1).toLocaleString()} ${radonUnits}`
                 ];
                 if (r.tempOut !== null && isFinite(r.tempOut) && state.showTempOut) {
-                    tooltipLines.push(`T outdoor: ${r.tempOut.toFixed(1)} ${temperatureUnits}`);
+                    tooltipLines.push(`T outdoor: ${r.tempOut.toFixed(1).toLocaleString()} ${temperatureUnits}`);
                 }
                 if (r.tempIn !== null && isFinite(r.tempIn) && state.showTempIn) {
-                    tooltipLines.push(`T indoor: ${r.tempIn.toFixed(1)} ${temperatureUnits}`);
+                    tooltipLines.push(`T indoor: ${r.tempIn.toFixed(1).toLocaleString()} ${temperatureUnits}`);
                 }
                 if (r.deltaTemp !== null && isFinite(r.deltaTemp) && state.showDeltaTemp) {
-                    tooltipLines.push(`Delta T: ${r.deltaTemp.toFixed(1)} ${temperatureUnits}`);
+                    tooltipLines.push(`Delta T: ${r.deltaTemp.toFixed(1).toLocaleString()} ${temperatureUnits}`);
                 }
                 
                 if (r.fit) {
                     tooltipLines.push("");
                     tooltipLines.push(`№ сегмента: ${r.fit.id}`);
-                    tooltipLines.push(`C0: ${r.fit.C0.toFixed(1)} ${radonUnits}`);
-                    tooltipLines.push(`φ: (${r.fit.phi.toFixed(1)} ± ${r.fit.sePhi.toFixed(1)}) ${phiUnits}`);
-                    tooltipLines.push(`λ: (${r.fit.lambda < 0.01 ? r.fit.lambda.toExponential(2) : r.fit.lambda.toFixed(3)} ± ${r.fit.lambda < 0.01 ? r.fit.seLambda.toExponential(2) : r.fit.seLambda.toFixed(3)}) ${lambdaUnits}`);
-                    tooltipLines.push(`C(t): (${model(r.fit.t0, r.fit.lambda, r.fit.phi, r.fit.C0).toFixed(1)} ± ${r.fit.rmse.toFixed(1)}) ${radonUnits}`);
+                    tooltipLines.push(`C0: ${r.fit.C0.toFixed(1).toLocaleString()} ${radonUnits}`);
+                    tooltipLines.push(`φ: (${r.fit.phi.toFixed(1).toLocaleString()} ± ${r.fit.sePhi.toFixed(1).toLocaleString()}) ${phiUnits}`);
+                    tooltipLines.push(`λ: (${r.fit.lambda < 0.01 ? r.fit.lambda.toExponential(2).toLocaleString() : r.fit.lambda.toFixed(3).toLocaleString()} ± ${r.fit.lambda < 0.01 ? r.fit.seLambda.toExponential(2).toLocaleString() : r.fit.seLambda.toFixed(3).toLocaleString()}) ${lambdaUnits}`);
+                    tooltipLines.push(`C(t): (${model(r.fit.t0, r.fit.lambda, r.fit.phi, r.fit.C0).toFixed(1).toLocaleString()} ± ${r.fit.rmse.toFixed(1).toLocaleString()}) ${radonUnits}`);
                 }
 
                 const padX = 8,
@@ -2819,6 +2827,7 @@
                     "±SE(φ), " + phiUnits,
                     "λ, " + lambdaUnits,
                     "±SE(λ), " + lambdaUnits,
+                    "ОА радона (модель), " + radonUnits, 
                     state.hasTempOut ? "T outdoor, " + temperatureUnits : "",
                     state.hasTempIn ? "T indoor, " + temperatureUnits : "",
                     state.hasDeltaTemp ? "Delta T(in - out), " + temperatureUnits : ""
@@ -2830,10 +2839,16 @@
                     previewTableHead.appendChild(th);
                 }
 
+                let counter = 0;
+                let previousFlag = null;
                 previewTableBody.innerHTML = "";
                 const showOnlyIntervals = $("isShowOnlyIntervals").checked;
                 for (const r of state.rows) {
                     if (showOnlyIntervals && !r.fit) continue;
+
+                    if (r.flag !== previousFlag){
+                        counter = 0;
+                    }
 
                     const tr = document.createElement("tr");
                     const rowColor = "black";
@@ -2855,6 +2870,7 @@
                     <td style="padding:6px;border-bottom:1px solid #eee;">${r.fit ? r.fit.phi.toFixed(1).toLocaleString() : ""}</td>
                     <td style="padding:6px;border-bottom:1px solid #eee;">${r.fit ? (r.fit < 0.001 ? r.fit.lambda.toExponential(2).toLocaleString() : r.fit.lambda.toFixed(3).toLocaleString()) : ""}</td>
                     <td style="padding:6px;border-bottom:1px solid #eee;">${r.fit ? (r.fit.seLambda < 0.001 ? r.fit.seLambda.toExponential(2).toLocaleString() : r.fit.seLambda.toFixed(3).toLocaleString()) : ""}</td>
+                    <td style="padding:6px;border-bottom:1px solid #eee;">${r.fit ? model(counter, r.fit.lambda, r.fit.phi, r.fit.C0).toFixed(1).toLocaleString() : ""}</td>
                     `;
                     if (state.hasTempOut)
                         tr.innerHTML += `<td style="padding:6px;border-bottom:1px solid #eee;">${r.tempOut ? r.tempOut.toFixed(1).toLocaleString() : ""}</td>`;
@@ -2863,6 +2879,8 @@
                     if (state.hasDeltaTemp)
                         tr.innerHTML += `<td style="padding:6px;border-bottom:1px solid #eee;">${r.deltaTemp ? r.deltaTemp.toFixed(1).toLocaleString() : ""}</td>`;
                     previewTableBody.appendChild(tr);
+                    previousFlag = r.flag;
+                    counter++;
                 }
             }
 
