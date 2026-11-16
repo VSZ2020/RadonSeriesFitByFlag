@@ -660,7 +660,7 @@
                     <button id="resetZoomBtn">Сброс масштаба</button>
                     <span class="divider"></span>
                 </div>
-                <section class="right card">
+                <section class="right">
                     <div class="canvas-wrap">
                         <canvas id="chart"></canvas>
                         <div class="overlay"></div>
@@ -840,6 +840,10 @@
                 // Для интерактивной легенды
                 legendItems: [],
                 hasChanges : false,
+
+                // Для подсказки графика
+                tooltipTimer: null,
+                isTooltipShown: false,
             };
 
             // ========== ПАРАМЕТРЫ МОДЕЛИ ==========
@@ -2495,6 +2499,8 @@
                 ctx.stroke();
                 ctx.restore();
 
+                if (!state.isTooltipShown) return;
+
                 ctx.save();
                 const tooltipLines = [
                     `X: ${formatDateTime(r.t)} (${getDayOfWeek(r.t)})`,
@@ -3057,6 +3063,14 @@
                     state.cursorIndex = nearestPoint(p.x, p.y).idx;
                 }
 
+                state.isTooltipShown = false;
+                if (state.tooltipTimer) clearTimeout(state.tooltipTimer);
+
+                state.tooltipTimer = setTimeout(() => {
+                    state.isTooltipShown = true;
+                    render(); // Перерисовываем график, когда время вышло, чтобы показать текст
+                }, 300);
+
                 if (!state.dragging) {
                     render();
                     return;
@@ -3155,6 +3169,8 @@
 
             canvas.addEventListener("pointerleave", () => {
                 state.cursorIndex = -1;
+                state.isTooltipShown = false;
+                if (state.tooltipTimer) clearTimeout(state.tooltipTimer);
                 if (!state.dragging) render();
             });
 
