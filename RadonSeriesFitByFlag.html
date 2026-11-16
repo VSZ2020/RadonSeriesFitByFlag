@@ -171,7 +171,7 @@
             padding: 6px 8px;
         }
 
-        .constraints-box {
+        .constraints-section {
             line-height: 1.45;
             border: 1px solid var(--border);
             border-radius: 10px;
@@ -179,9 +179,18 @@
             background: #fff;
         }
 
-        .constraint-box-inputs {
-            display: inline-flex;
-            gap: 12px;
+        .constraint-item {
+            display: flex;
+            flex-direction: row;
+            gap: 6px;
+            align-items: center;
+            text-wrap-mode: nowrap;
+        }
+
+        .constraints-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
             padding: 12px;
             border: 1px solid var(--border);
             border-radius: 10px;
@@ -194,6 +203,7 @@
             padding: 6px 10px;
             width: 80px;
             margin-right: 10px;
+            max-height: 32px;
         }
 
         .dilution-marker {
@@ -529,6 +539,17 @@
                 height: 68vh;
             }
         }
+
+        @media (max-width: 1020px) {
+            .top-grid {
+                display: flex;
+                flex-direction: column;
+            }
+            .middle-grid {
+                display: flex;
+                flex-direction: column;
+            }
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -583,32 +604,48 @@
                 </div>
             </section>
             <section>
-                <div class="constraints-box left">
+                <div class="constraints-section left">
                     <span class="section-title">🚧 Границы поиска оптимальных параметров аппроксимации</span>
-                    <div style="color:var(--muted);font-size: small;">Примечание: по-умолчанию единицы измерения φ и λ соответствуют единицам ОА радона и шагу по времени загруженной серии</div>
+                    <div style="color:var(--muted);font-size: small;margin-top:-12px;">Примечание: по-умолчанию единицы измерения φ и λ соответствуют единицам ОА радона и шагу по времени загруженной серии</div>
                     <div>
-                        <div style="margin-bottom: 2px; font-weight: bold;">Для участков <span style="color:var(--red);">накопления</span></div>
-                        <div class="constraint-box-inputs" style="margin-bottom: 6px;">
-                            <span>Мин. λ</span>
-                            <input type="number" placeholder="0,01" value="0.01" id="lambdaMin" class="constraint-input">
-                            <span>Макс. λ</span>
-                            <input type="number" placeholder="1,5" value="1.5" id="lambdaMax" class="constraint-input">
-                            <span>Мин. φ</span>
-                            <input type="number" placeholder="1,0" value="1.0" id="phiMin" class="constraint-input">
-                            <span>Макс. φ</span>
-                            <input type="number" placeholder="500" value="500" id="phiMax" class="constraint-input">
+                        <div class="constraints-group" style="margin-bottom: 6px;">
+                            <div style="margin-bottom: 2px; font-weight: bold;">Для участков <span style="color:var(--red);">накопления</span></div>
+                            <div class="constraint-item">
+                                <span>Мин. λ</span>
+                                <input type="number" placeholder="0,01" value="0.01" id="lambdaMin" class="constraint-input">
+                            </div>
+                            <div class="constraint-item">
+                                <span>Макс. λ</span>
+                                <input type="number" placeholder="0,2" value="0.2" id="lambdaMax" class="constraint-input">
+                            </div>
+                            <div class="constraint-item">
+                                <span>Мин. φ</span>
+                                <input type="number" placeholder="1,0" value="1.0" id="phiMin" class="constraint-input">
+                            </div>
+                            <div class="constraint-item">
+                                <span>Макс. φ</span>
+                                <input type="number" placeholder="500" value="500" id="phiMax" class="constraint-input">
+                            </div>
                         </div>
                         
-                        <div style="margin-bottom: 2px;font-weight: bold;">Для участков <span style="color:var(--blue);">разбавления</span></div>
-                        <div class="constraint-box-inputs" style="margin-bottom: 0px;">
-                            <span>Мин. λ</span>
-                            <input type="number" placeholder="0,01" value="0.01" id="lambdaMinDilution" class="constraint-input">
-                            <span>Макс. λ</span>
-                            <input type="number" placeholder="1,5" value="1.5" id="lambdaMaxDilution" class="constraint-input">
-                            <span>Мин. φ</span>
-                            <input type="number" placeholder="1,0" value="1.0" id="phiMinDilution" class="constraint-input">
-                            <span>Макс. φ</span>
-                            <input type="number" placeholder="500" value="500" id="phiMaxDilution" class="constraint-input" min="1">
+                        <div class="constraints-group" style="margin-bottom: 0px;">
+                            <div style="margin-bottom: 2px;font-weight: bold;">Для участков <span style="color:var(--blue);">разбавления</span></div>
+                            <div class="constraint-item">
+                                <span>Мин. λ</span>
+                                <input type="number" placeholder="0,2" value="0.2" id="lambdaMinDilution" class="constraint-input">
+                            </div>
+                            <div class="constraint-item">
+                                <span>Макс. λ</span>
+                                <input type="number" placeholder="1,5" value="1.5" id="lambdaMaxDilution" class="constraint-input">
+                            </div>
+                            <div class="constraint-item">
+                                <span>Мин. φ</span>
+                                <input type="number" placeholder="1,0" value="1.0" id="phiMinDilution" class="constraint-input">
+                            </div>
+                            <div class="constraint-item">
+                                <span>Макс. φ</span>
+                                <input type="number" placeholder="500" value="500" id="phiMaxDilution" class="constraint-input" min="1">
+                            </div>
                         </div>
                     </div>
                     <div>
