@@ -1623,12 +1623,18 @@
                         g2 += dYdPhi * r;
                     }
 
-                    const a = j11 + mu,
+                    // Внедрено масштабирование Марквардта по диагонали (инвариантность к масштабу параметров)
+                    const diag1 = Math.max(j11, 1e-12);
+                    const diag2 = Math.max(j22, 1e-12);
+                    
+                    const a = diag1 * (1 + mu),
                         b = j12,
                         c = j12,
-                        d = j22 + mu;
+                        d = diag2 * (1 + mu);
+                        
                     const det = a * d - b * c;
                     if (!isFinite(det) || Math.abs(det) < 1e-18) break;
+                    
                     const dLambda = (g1 * d - b * g2) / det;
                     const dPhi = (a * g2 - c * g1) / det;
 
@@ -1643,10 +1649,11 @@
                         phi = candPhi;
                         bestErr = err;
                         best = { lambda, phi };
-                        mu *= 0.7;
+                        mu = Math.max(mu * 0.3, 1e-7); // Успешный шаг: уменьшаем параметр затухания
                     } else {
-                        mu *= 2;
+                        mu = Math.min(mu * 10, 1e7);   // Неудачный шаг: увеличиваем затухание
                     }
+                    
                     if (Math.abs(dLambda) < 1e-10 && Math.abs(dPhi) < 1e-10) break;
                 }
 
@@ -1681,11 +1688,9 @@
                 let sePhi = NaN;
 
                 if (isFinite(det) && Math.abs(det) > 1e-18 && dof > 0) {
-                    // Инвертированная матрица: inv(J^T * J) = (1/det) * [[j22, -j12], [-j12, j11]]
                     const invJ11 = j22 / det;
                     const invJ22 = j11 / det;
 
-                    // Диагональные элементы ковариационной матрицы * sigma^2
                     seLambda = Math.sqrt(Math.max(0, sigma2 * invJ11));
                     sePhi = Math.sqrt(Math.max(0, sigma2 * invJ22));
                 }
