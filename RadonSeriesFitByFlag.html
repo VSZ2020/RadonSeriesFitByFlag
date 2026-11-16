@@ -552,6 +552,7 @@
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-error-bars@4.4.5/build/index.umd.min.js"></script>
 </head>
 
 <body>
@@ -1227,15 +1228,15 @@
 
             function loadExample(){
                 inputText.value = `Дата и время	ОА радона, Бк/м3	Флаг
-01.01.2026 00:00	369	Н
-01.01.2026 01:00	355	Н
-01.01.2026 02:00	378	Н
-01.01.2026 03:00	372	Н
-01.01.2026 04:00	373	Н
-01.01.2026 05:00	381	Н
-01.01.2026 06:00	370	Н
-01.01.2026 07:00	374	Н
-01.01.2026 08:00	367	Н
+01.01.2026 00:00	369
+01.01.2026 01:00	355
+01.01.2026 02:00	378
+01.01.2026 03:00	372
+01.01.2026 04:00	373	
+01.01.2026 05:00	381
+01.01.2026 06:00	370
+01.01.2026 07:00	374
+01.01.2026 08:00	367
 01.01.2026 09:00	357	Р
 01.01.2026 10:00	313	Р
 01.01.2026 11:00	278	Р
@@ -2714,30 +2715,40 @@
                     data: {
                         datasets: [
                             {
-                                type: 'scatter',
+                                type: 'scatterWithErrorBars',
                                 label: 'Накопление',
                                 backgroundColor: 'rgba(220, 38, 38, 0.6)',
                                 borderColor: 'rgba(220, 38, 38, 1)',
-                                pointRadius: 3
+                                pointRadius: 3,
+                                errorBarColor: 'rgba(220, 38, 38, 1)',
+                                errorBarWhiskerColor: 'rgba(220, 38, 38, 1)',
+                                errorBarLineWidth: 1,
+                                errorBarWhiskerSize: 10,
+                                errorBarWhiskerLineWidth: 1,
                             },
                             {
-                                type: 'scatter',
+                                type: 'scatterWithErrorBars',
                                 label: 'Разбавление',
                                 backgroundColor: 'rgba(54, 162, 235, 0.6)',
                                 borderColor: 'rgba(54, 162, 235, 1)',
-                                pointRadius: 3
+                                pointRadius: 3,
+                                errorBarColor: 'rgba(54, 162, 235, 1)',
+                                errorBarWhiskerColor: 'rgba(54, 162, 235, 1)',
+                                errorBarLineWidth: 1,
+                                errorBarWhiskerSize: 10,
+                                errorBarWhiskerLineWidth: 1,
                             },
                             {
                                 type: 'line',
                                 label: 'Накопление (тренд)',
-                                borderColor: 'rgba(220, 38, 38, 1)',
+                                borderColor: 'rgba(220, 38, 38, 0.8)',
                                 fill: false,
                                 pointRadius: 0
                             },
                             {
                                 type: 'line',
                                 label: 'Разбавление (тренд)',
-                                borderColor: 'rgba(54, 162, 235, 1)',
+                                borderColor: 'rgba(54, 162, 235, 0.8)',
                                 fill: false,
                                 pointRadius: 0
                             },
@@ -2776,9 +2787,23 @@
                 const pts2 = [];
                 for (const fit of state.fits){
                     if (fit.flag === "Н")
-                        pts1.push({x: fit.lambda, y: fit.phi});
+                        pts1.push({
+                            x: fit.lambda, 
+                            y: fit.phi, 
+                            xMin: fit.seLambda ? fit.lambda - fit.seLambda: null, 
+                            xMax: fit.seLambda ? fit.lambda + fit.seLambda: null,
+                            yMin: fit.sePhi ? fit.phi - fit.sePhi: null, 
+                            yMax: fit.sePhi ? fit.phi + fit.sePhi : null
+                        });
                     if (fit.flag === "Р")
-                        pts2.push({x: fit.lambda, y: fit.phi});
+                        pts2.push({
+                            x: fit.lambda, 
+                            y: fit.phi,
+                            xMin: fit.seLambda ? fit.lambda - fit.seLambda: null, 
+                            xMax: fit.seLambda ? fit.lambda + fit.seLambda: null,
+                            yMin: fit.sePhi ? fit.phi - fit.sePhi: null, 
+                            yMax: fit.sePhi ? fit.phi + fit.sePhi : null
+                        });
                 }
                 lambdaPhiChart.data.datasets[0].data = pts1;
                 lambdaPhiChart.data.datasets[1].data = pts2;
